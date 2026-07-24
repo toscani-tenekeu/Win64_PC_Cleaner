@@ -9,9 +9,9 @@ import { differenceInDays } from "date-fns";
 export const Route = createFileRoute("/applications")({
   head: () => ({
     meta: [
-      { title: "Applications — Broomstick" },
+      { title: "Applications — Free Win64 PC Cleaner" },
       { name: "description", content: "Installed apps with size, publisher and last-used dates. Uninstalls always run the official uninstaller." },
-      { property: "og:title", content: "Applications — Broomstick" },
+      { property: "og:title", content: "Applications — Free Win64 PC Cleaner" },
       { property: "og:description", content: "Installed apps with size and last-used dates." },
     ],
   }),
