@@ -10,9 +10,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/duplicates")({
   head: () => ({
     meta: [
-      { title: "Duplicates — Broomstick" },
+      { title: "Duplicates — Free Win64 PC Cleaner" },
       { name: "description", content: "Byte-verified duplicate groups. Keep the copy you want; the rest go to Quarantine." },
-      { property: "og:title", content: "Duplicates — Broomstick" },
+      { property: "og:title", content: "Duplicates — Free Win64 PC Cleaner" },
       { property: "og:description", content: "Byte-verified duplicate groups with safe removal." },
     ],
   }),
