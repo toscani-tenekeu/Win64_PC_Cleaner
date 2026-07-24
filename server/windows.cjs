@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
+const { db, logActivity } = require('./database.cjs');
 const execFileAsync = promisify(execFile);
 
 function ensureWindows() {
@@ -26,6 +27,10 @@ async function powershellJson(script, timeout) {
   if (!output) return [];
   const value = JSON.parse(output);
   return Array.isArray(value) ? value : [value];
+}
+
+function encodePowerShell(value) {
+  return Buffer.from(String(value), 'utf16le').toString('base64');
 }
 
 async function getDrives() {
@@ -81,7 +86,7 @@ async function launchUninstaller(id) {
     error.status = 404;
     throw error;
   }
-  const encoded = Buffer.from(app.uninstallString, 'utf16le').toString('base64');
+  const encoded = encodePowerShell(app.uninstallString);
   await powershell(`
     $command = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${encoded}'));
     Start-Process -FilePath 'cmd.exe' -ArgumentList '/d','/s','/c',('start "" ' + $command)
@@ -89,7 +94,7 @@ async function launchUninstaller(id) {
   return { launched: true, name: app.name };
 }
 
-async function getStartupEntries() {
+async function getActiveStartupEntries() {
   const rows = await powershellJson(`
     $items = @();
     foreach ($root in @(
@@ -118,4 +123,64 @@ async function getStartupEntries() {
   }));
 }
 
-module.exports = { getDrives, getApplications, launchUninstaller, getStartupEntries, powershell };
+async function getStartupEntries() {
+  const active = await getActiveStartupEntries();
+  const disabled = db.prepare(`
+    SELECT id, name, command AS path, registry_path AS registryPath, scope AS publisher
+    FROM disabled_startup ORDER BY name
+  `).all().map((row) => ({
+    ...row,
+    valueName: row.name,
+    enabled: false,
+    impact: 'medium',
+    source: 'registry',
+  }));
+  return [...active, ...disabled].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function toggleStartup(id, enabled) {
+  if (enabled) {
+    const item = db.prepare('SELECT * FROM disabled_startup WHERE id = ?').get(id);
+    if (!item) {
+      const error = new Error('Disabled startup entry not found.');
+      error.status = 404;
+      throw error;
+    }
+    const registryPath = encodePowerShell(item.registry_path);
+    const name = encodePowerShell(item.name);
+    const command = encodePowerShell(item.command);
+    await powershell(`
+      $path=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${registryPath}'));
+      $name=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${name}'));
+      $command=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${command}'));
+      if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null };
+      New-ItemProperty -Path $path -Name $name -Value $command -PropertyType String -Force | Out-Null
+    `);
+    db.prepare('DELETE FROM disabled_startup WHERE id = ?').run(id);
+    logActivity('Startup', `Enabled ${item.name}`);
+    return { id, enabled: true };
+  }
+
+  const active = await getActiveStartupEntries();
+  const item = active.find((entry) => entry.id === id);
+  if (!item) {
+    const error = new Error('Enabled startup entry not found.');
+    error.status = 404;
+    throw error;
+  }
+  const registryPath = encodePowerShell(item.registryPath);
+  const name = encodePowerShell(item.valueName);
+  await powershell(`
+    $path=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${registryPath}'));
+    $name=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${name}'));
+    Remove-ItemProperty -Path $path -Name $name -ErrorAction Stop
+  `);
+  db.prepare(`
+    INSERT OR REPLACE INTO disabled_startup (id, name, command, registry_path, scope)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(item.id, item.name, item.path, item.registryPath, item.publisher);
+  logActivity('Startup', `Disabled ${item.name}`);
+  return { id, enabled: false };
+}
+
+module.exports = { getDrives, getApplications, launchUninstaller, getStartupEntries, toggleStartup, powershell };
