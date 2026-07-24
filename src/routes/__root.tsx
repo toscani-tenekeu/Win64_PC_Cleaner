@@ -80,14 +80,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Broomstick — Windows storage & cleanup" },
+      { title: "Free Win64 PC Cleaner — Windows storage & cleanup" },
       {
         name: "description",
         content:
-          "Broomstick is a transparent Windows storage analyzer and cleanup dashboard. See exactly what will be removed before anything is touched.",
+          "Free Win64 PC Cleaner is a transparent Windows storage analyzer and cleanup dashboard. See exactly what will be removed before anything is touched.",
       },
-      { name: "author", content: "Broomstick" },
-      { property: "og:title", content: "Broomstick — Windows storage & cleanup" },
+      { name: "author", content: "Free Win64 PC Cleaner" },
+      { property: "og:title", content: "Free Win64 PC Cleaner — Windows storage & cleanup" },
       {
         property: "og:description",
         content:
