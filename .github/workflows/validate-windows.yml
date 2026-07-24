@@ -1,0 +1,40 @@
+name: Validate Windows build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js x64
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          architecture: x64
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Validate backend syntax
+        shell: pwsh
+        run: |
+          Get-ChildItem server -Filter *.cjs | ForEach-Object {
+            node --check $_.FullName
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          node --check scripts/start-local.cjs
+
+      - name: Build frontend
+        run: npm run build
