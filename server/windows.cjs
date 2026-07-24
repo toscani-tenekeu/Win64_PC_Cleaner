@@ -42,6 +42,23 @@ function encodePowerShell(value) {
   return Buffer.from(String(value), 'utf16le').toString('base64');
 }
 
+function requiresAdminForRegistryPath(registryPath) {
+  return typeof registryPath === 'string' && /^HKLM:/i.test(registryPath);
+}
+
+let elevationCache = null;
+
+async function isElevated() {
+  if (elevationCache != null) return elevationCache;
+  try {
+    const output = await powershell(`([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)`);
+    elevationCache = /^true$/i.test(output.trim());
+  } catch {
+    elevationCache = false;
+  }
+  return elevationCache;
+}
+
 async function getDrives() {
   const rows = await powershellJson(`
     Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
@@ -129,6 +146,7 @@ async function getActiveStartupEntries() {
     source: 'registry',
     registryPath: row.RegistryPath,
     valueName: row.Name,
+    requiresAdmin: requiresAdminForRegistryPath(row.RegistryPath),
   }));
 }
 
@@ -146,19 +164,33 @@ async function toggleStartup(id, enabled) {
       error.status = 404;
       throw error;
     }
-    const registryPath = encodePowerShell(item.registry_path);
+    if (requiresAdminForRegistryPath(item.registryPath) && !(await isElevated())) {
+      const error = new Error('Enabling this startup entry requires Administrator privileges.');
+      error.status = 403;
+      throw error;
+    }
+    const registryPath = encodePowerShell(item.registryPath);
     const name = encodePowerShell(item.name);
     const command = encodePowerShell(item.command);
-    await powershell(`
-      $path=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${registryPath}'));
-      $name=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${name}'));
-      $command=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${command}'));
-      if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null };
-      New-ItemProperty -Path $path -Name $name -Value $command -PropertyType String -Force | Out-Null
-    `);
+    try {
+      await powershell(`
+        $path=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${registryPath}'));
+        $name=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${name}'));
+        $command=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${command}'));
+        if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null };
+        New-ItemProperty -Path $path -Name $name -Value $command -PropertyType String -Force | Out-Null
+      `);
+    } catch (error) {
+      if (/Requested registry access is not allowed|PermissionDenied|SecurityException/i.test(String(error.stderr || error.message || ''))) {
+        const adminError = new Error('Enabling this startup entry requires Administrator privileges.');
+        adminError.status = 403;
+        throw adminError;
+      }
+      throw error;
+    }
     await deleteDisabledStartupEntry(id);
     await logActivity('Startup', `Enabled ${item.name}`);
-    return { id, enabled: true };
+    return { id, enabled: true, requiresAdmin: requiresAdminForRegistryPath(item.registryPath) };
   }
 
   const active = await getActiveStartupEntries();
@@ -170,11 +202,25 @@ async function toggleStartup(id, enabled) {
   }
   const registryPath = encodePowerShell(item.registryPath);
   const name = encodePowerShell(item.valueName);
-  await powershell(`
-      $path=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${registryPath}'));
-      $name=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${name}'));
-      Remove-ItemProperty -Path $path -Name $name -ErrorAction Stop
-    `);
+  if (requiresAdminForRegistryPath(item.registryPath) && !(await isElevated())) {
+    const error = new Error('Disabling this startup entry requires Administrator privileges.');
+    error.status = 403;
+    throw error;
+  }
+  try {
+    await powershell(`
+        $path=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${registryPath}'));
+        $name=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${name}'));
+        Remove-ItemProperty -Path $path -Name $name -ErrorAction Stop
+      `);
+  } catch (error) {
+    if (/Requested registry access is not allowed|PermissionDenied|SecurityException/i.test(String(error.stderr || error.message || ''))) {
+      const adminError = new Error('Disabling this startup entry requires Administrator privileges.');
+      adminError.status = 403;
+      throw adminError;
+    }
+    throw error;
+  }
   await upsertDisabledStartupEntry({
     id: item.id,
     name: item.name,
@@ -183,7 +229,7 @@ async function toggleStartup(id, enabled) {
     scope: item.publisher,
   });
   await logActivity('Startup', `Disabled ${item.name}`);
-  return { id, enabled: false };
+  return { id, enabled: false, requiresAdmin: requiresAdminForRegistryPath(item.registryPath) };
 }
 
 module.exports = { getDrives, getApplications, launchUninstaller, getStartupEntries, toggleStartup, powershell };

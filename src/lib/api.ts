@@ -32,7 +32,7 @@ export type CleanupCategory = {
   available: boolean;
 };
 
-export type QuarantineItem = {
+export type TrashItem = {
   id: string;
   originalPath: string;
   sizeBytes: number;
@@ -86,7 +86,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   health: () => request<Health>('/api/health'),
-  overview: () => request<{ drives: Drive[]; cleanupCategories: CleanupCategory[]; quarantine: QuarantineItem[]; activity: Array<{ id: number; action: string; detail: string; freedBytes: number | null; createdAt: string }> }>('/api/overview'),
+  overview: () => request<{ drives: Drive[]; cleanupCategories: CleanupCategory[]; trash: TrashItem[]; activity: Array<{ id: number; action: string; detail: string; freedBytes: number | null; createdAt: string }> }>('/api/overview'),
   drives: () => request<Drive[]>('/api/drives'),
   applications: () => request<Application[]>('/api/applications'),
   uninstall: (id: string) => request<{ launched: boolean; name: string }>(`/api/applications/${id}/uninstall`, { method: 'POST' }),
@@ -94,12 +94,12 @@ export const api = {
   toggleStartup: (id: string, enabled: boolean) => request<{ id: string; enabled: boolean }>(`/api/startup/${id}/toggle`, { method: 'POST', body: JSON.stringify({ enabled }) }),
   files: (path?: string) => request<DirectoryListing>(`/api/files${path ? `?path=${encodeURIComponent(path)}` : ''}`),
   createFolder: (parentPath: string, name: string) => request<{ path: string }>('/api/files/folder', { method: 'POST', body: JSON.stringify({ parentPath, name }) }),
-  quarantineFile: (path: string) => request<QuarantineItem>('/api/files', { method: 'DELETE', body: JSON.stringify({ path }) }),
+  trashFile: (path: string) => request<TrashItem>('/api/trash', { method: 'DELETE', body: JSON.stringify({ path }) }),
   cleanerScan: () => request<CleanupCategory[]>('/api/cleaner/scan'),
   clean: (categoryIds: string[]) => request<{ sizeBytes: number; results: unknown[] }>('/api/cleaner/run', { method: 'POST', body: JSON.stringify({ categoryIds }) }),
-  quarantine: () => request<QuarantineItem[]>('/api/quarantine'),
-  restore: (id: string) => request(`/api/quarantine/${id}/restore`, { method: 'POST' }),
-  purge: (id: string) => request(`/api/quarantine/${id}`, { method: 'DELETE' }),
+  trash: () => request<TrashItem[]>('/api/trash'),
+  restoreTrash: (id: string) => request(`/api/trash/${id}/restore`, { method: 'POST' }),
+  purgeTrash: (id: string) => request(`/api/trash/${id}`, { method: 'DELETE' }),
   settings: () => request<Record<string, unknown>>('/api/settings'),
   saveSettings: (settings: Record<string, unknown>) => request<Record<string, unknown>>('/api/settings', { method: 'PUT', body: JSON.stringify(settings) }),
   largeFiles: (root: string, minMB: number) => request<{ root: string; files: Array<{ path: string; name: string; directory: string; kind: string; sizeBytes: number; modified: string }> }>('/api/scans/large-files', { method: 'POST', body: JSON.stringify({ root, minMB }) }),

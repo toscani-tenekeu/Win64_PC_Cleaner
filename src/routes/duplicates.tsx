@@ -13,7 +13,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/duplicates")({
   head: () => ({ meta: [
     { title: "Duplicates — Free Win64 PC Cleaner" },
-    { name: "description", content: "Find real duplicate files with SHA-256 verification and quarantine extra copies." },
+    { name: "description", content: "Find real duplicate files with SHA-256 verification and trash extra copies." },
   ] }),
   component: DuplicatesPage,
 });
@@ -26,16 +26,16 @@ function DuplicatesPage() {
     mutationFn: () => api.duplicates(root, minMB),
     onError: (error) => toast.error(error.message),
   });
-  const quarantineGroup = useMutation({
+  const trashGroup = useMutation({
     mutationFn: async (paths: string[]) => {
       const results = [];
-      for (const filePath of paths) results.push(await api.quarantineFile(filePath));
+      for (const filePath of paths) results.push(await api.trashFile(filePath));
       return results;
     },
     onSuccess: async (items) => {
-      toast.success(`Moved ${items.length} duplicate ${items.length === 1 ? "copy" : "copies"} to Quarantine`);
+      toast.success(`Moved ${items.length} duplicate ${items.length === 1 ? "copy" : "copies"} to Trash`);
       await Promise.all([
-        client.invalidateQueries({ queryKey: ["quarantine"] }),
+        client.invalidateQueries({ queryKey: ["trash"] }),
         client.invalidateQueries({ queryKey: ["overview"] }),
       ]);
       scan.mutate();
@@ -51,7 +51,7 @@ function DuplicatesPage() {
     <PageShell
       eyebrow="Scan"
       title="Duplicate Files"
-      description="Files are grouped by exact size, then verified with SHA-256. Quarantine extras keeps the first listed copy and moves the others to Quarantine."
+      description="Files are grouped by exact size, then verified with SHA-256. Trash extras keeps the first listed copy and moves the others to Trash."
       actions={<Button size="sm" className="gap-1.5" disabled={scan.isPending} onClick={() => scan.mutate()}><Search className="h-3.5 w-3.5" />{scan.isPending ? "Scanning…" : "Start scan"}</Button>}
     >
       <Card className="p-4">
@@ -79,7 +79,7 @@ function DuplicatesPage() {
               </div>
               <div className="flex items-center gap-3">
                 <span className="font-mono text-xs text-muted-foreground">{formatBytes(group.sizeBytes)} each · save {formatBytes(group.sizeBytes * (group.copies.length - 1))}</span>
-                <Button size="sm" variant="secondary" className="gap-1.5" disabled={quarantineGroup.isPending} onClick={() => quarantineGroup.mutate(group.copies.slice(1).map((copy) => copy.path))}><Trash2 className="h-3.5 w-3.5" />Quarantine extras</Button>
+                <Button size="sm" variant="secondary" className="gap-1.5" disabled={trashGroup.isPending} onClick={() => trashGroup.mutate(group.copies.slice(1).map((copy) => copy.path))}><Trash2 className="h-3.5 w-3.5" />Trash extras</Button>
               </div>
             </div>
             <ul className="divide-y divide-border">

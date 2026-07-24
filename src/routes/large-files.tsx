@@ -14,7 +14,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/large-files")({
   head: () => ({ meta: [
     { title: "Large Files — Free Win64 PC Cleaner" },
-    { name: "description", content: "Scan a real local folder for oversized files and move selected results to quarantine." },
+    { name: "description", content: "Scan a real local folder for oversized files and move selected results to Trash." },
   ] }),
   component: LargeFilesPage,
 });
@@ -24,11 +24,11 @@ function LargeFilesPage() {
   const [root, setRoot] = useState("");
   const [minMB, setMinMB] = useState(1000);
   const scan = useMutation({ mutationFn: () => api.largeFiles(root, minMB), onError: (error) => toast.error(error.message) });
-  const quarantine = useMutation({
-    mutationFn: api.quarantineFile,
+  const trash = useMutation({
+    mutationFn: api.trashFile,
     onSuccess: async () => {
-      toast.success("Moved to Quarantine");
-      await Promise.all([client.invalidateQueries({ queryKey: ["quarantine"] }), client.invalidateQueries({ queryKey: ["overview"] })]);
+      toast.success("Moved to Trash");
+      await Promise.all([client.invalidateQueries({ queryKey: ["trash"] }), client.invalidateQueries({ queryKey: ["overview"] })]);
       scan.mutate();
     },
     onError: (error) => toast.error(error.message),
@@ -63,7 +63,7 @@ function LargeFilesPage() {
             <div className="flex min-w-0 flex-col"><span className="truncate text-sm font-medium">{file.name}</span><span className="truncate font-mono text-[11px] text-muted-foreground">{file.directory}</span></div>
             <Badge variant="secondary" className="text-[10px]">{file.kind}</Badge>
             <span className="font-mono text-xs text-muted-foreground">{new Date(file.modified).toLocaleDateString()}</span>
-            <div className="flex w-28 items-center justify-end gap-2"><span className="font-mono text-sm">{formatBytes(file.sizeBytes)}</span><Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" disabled={quarantine.isPending} onClick={() => quarantine.mutate(file.path)}><Trash2 className="h-3.5 w-3.5" /></Button></div>
+            <div className="flex w-28 items-center justify-end gap-2"><span className="font-mono text-sm">{formatBytes(file.sizeBytes)}</span><Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" disabled={trash.isPending} onClick={() => trash.mutate(file.path)}><Trash2 className="h-3.5 w-3.5" /></Button></div>
           </li>)}
           {scan.isPending ? <li className="px-4 py-10 text-center text-sm text-muted-foreground">Scanning files recursively…</li> : null}
           {scan.isSuccess && files.length === 0 ? <li className="px-4 py-10 text-center text-sm text-muted-foreground">No file meets the selected threshold.</li> : null}

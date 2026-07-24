@@ -13,7 +13,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/files")({
   head: () => ({ meta: [
     { title: "File Manager — Free Win64 PC Cleaner" },
-    { name: "description", content: "Browse real local Windows folders and perform quarantine-first file operations." },
+    { name: "description", content: "Browse real local Windows folders and perform trash-first file operations." },
   ] }),
   component: FilesPage,
 });
@@ -56,12 +56,12 @@ function FilesPage() {
     onSuccess: async () => { toast.success("Folder created"); await refresh(); },
     onError: (error) => toast.error(error.message),
   });
-  const quarantine = useMutation({
-    mutationFn: api.quarantineFile,
+  const trash = useMutation({
+    mutationFn: api.trashFile,
     onSuccess: async () => {
-      toast.success("Moved to Quarantine");
+      toast.success("Moved to Trash");
       setSelected(null);
-      await Promise.all([refresh(), client.invalidateQueries({ queryKey: ["quarantine"] }), client.invalidateQueries({ queryKey: ["overview"] })]);
+      await Promise.all([refresh(), client.invalidateQueries({ queryKey: ["trash"] }), client.invalidateQueries({ queryKey: ["overview"] })]);
     },
     onError: (error) => toast.error(error.message),
   });
@@ -75,13 +75,13 @@ function FilesPage() {
     <PageShell
       eyebrow="Explorer"
       title="File Manager"
-      description="Browse the real local filesystem. Delete actions move items to Quarantine instead of permanently removing them."
+      description="Browse the real local filesystem. Delete actions move items to Trash instead of permanently removing them."
       actions={<>
         <Button variant="ghost" size="sm" className="gap-1.5" disabled={!listing.data || createFolder.isPending} onClick={() => {
           const name = window.prompt("New folder name");
           if (name?.trim() && listing.data) createFolder.mutate({ parentPath: listing.data.path, name: name.trim() });
         }}><FolderPlus className="h-3.5 w-3.5" />New folder</Button>
-        <Button variant="ghost" size="sm" className="gap-1.5 text-destructive hover:text-destructive" disabled={!selected || quarantine.isPending} onClick={() => selected && quarantine.mutate(selected)}><Trash2 className="h-3.5 w-3.5" />Quarantine</Button>
+        <Button variant="ghost" size="sm" className="gap-1.5 text-destructive hover:text-destructive" disabled={!selected || trash.isPending} onClick={() => selected && trash.mutate(selected)}><Trash2 className="h-3.5 w-3.5" />Trash</Button>
       </>}
     >
       {listing.isError ? <Card className="border-destructive/40 p-4 text-sm text-destructive">Unable to open folder: {listing.error.message}</Card> : null}

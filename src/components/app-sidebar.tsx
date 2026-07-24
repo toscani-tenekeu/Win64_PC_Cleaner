@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   FolderTree,
   PieChart,
+  Sparkles,
   Trash2,
   Copy,
   FileBox,
@@ -30,7 +31,7 @@ const overview = [{ title: "Overview", url: "/", icon: LayoutDashboard }];
 const manage = [
   { title: "File Manager", url: "/files", icon: FolderTree },
   { title: "Storage Analyzer", url: "/storage", icon: PieChart },
-  { title: "Cleaner", url: "/cleaner", icon: Trash2 },
+  { title: "Cleaner", url: "/cleaner", icon: Sparkles },
   { title: "Duplicates", url: "/duplicates", icon: Copy },
   { title: "Large Files", url: "/large-files", icon: FileBox },
 ];
@@ -38,7 +39,7 @@ const manage = [
 const system = [
   { title: "Applications", url: "/applications", icon: Package },
   { title: "Startup", url: "/startup", icon: Rocket },
-  { title: "Quarantine", url: "/quarantine", icon: ShieldCheck },
+  { title: "Trash", url: "/trash", icon: Trash2 },
 ];
 
 const bottom = [{ title: "Settings", url: "/settings", icon: SettingsIcon }];

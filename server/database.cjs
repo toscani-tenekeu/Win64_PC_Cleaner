@@ -6,9 +6,9 @@ const config = require('./config.cjs');
 const defaults = {
   theme: 'dark',
   units: 'binary',
-  quarantineRetentionDays: 30,
+  trashRetentionDays: 30,
   confirmDestructiveActions: true,
-  moveToQuarantine: true,
+  moveToTrash: true,
   duplicateHashAlgorithm: 'sha256',
   scanMaxFiles: 50000,
 };
@@ -94,7 +94,7 @@ function createSqliteBackend() {
   }
 
   fs.mkdirSync(path.dirname(config.databasePath), { recursive: true });
-  fs.mkdirSync(config.quarantineRoot, { recursive: true });
+  fs.mkdirSync(config.trashRoot, { recursive: true });
 
   const db = new DatabaseSync(config.databasePath);
   db.exec(`
@@ -110,7 +110,7 @@ function createSqliteBackend() {
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS quarantine_items (
+    CREATE TABLE IF NOT EXISTS trash_items (
       id TEXT PRIMARY KEY,
       original_path TEXT NOT NULL,
       stored_path TEXT NOT NULL,
@@ -149,18 +149,18 @@ function createSqliteBackend() {
   const selectSettings = db.prepare('SELECT key, value FROM settings ORDER BY key');
   const selectProtected = db.prepare('SELECT path FROM protected_paths ORDER BY path');
   const insertActivity = db.prepare('INSERT INTO activity (action, detail, freed_bytes, created_at) VALUES (?, ?, ?, ?)');
-  const insertQuarantine = db.prepare(`
-    INSERT INTO quarantine_items
+  const insertTrash = db.prepare(`
+    INSERT INTO trash_items
       (id, original_path, stored_path, size_bytes, category, deleted_at, expires_at, is_directory)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  const selectQuarantine = db.prepare(`
+  const selectTrash = db.prepare(`
     SELECT id, original_path AS originalPath, stored_path AS storedPath, size_bytes AS sizeBytes,
            category, deleted_at AS deletedAt, expires_at AS expiresAt, is_directory AS isDirectory
-    FROM quarantine_items ORDER BY deleted_at DESC
+    FROM trash_items ORDER BY deleted_at DESC
   `);
-  const selectQuarantineItem = db.prepare('SELECT * FROM quarantine_items WHERE id = ?');
-  const deleteQuarantineItem = db.prepare('DELETE FROM quarantine_items WHERE id = ?');
+  const selectTrashItem = db.prepare('SELECT * FROM trash_items WHERE id = ?');
+  const deleteTrashItem = db.prepare('DELETE FROM trash_items WHERE id = ?');
   const selectActivity = db.prepare(`
     SELECT id, action, detail, freed_bytes AS freedBytes, created_at AS createdAt
     FROM activity ORDER BY id DESC LIMIT ?
@@ -252,8 +252,8 @@ function createSqliteBackend() {
         createdAt: normalizeDate(row.createdAt),
       }));
     },
-    async insertQuarantineItem(item) {
-      insertQuarantine.run(
+    async insertTrashItem(item) {
+      insertTrash.run(
         item.id,
         item.originalPath,
         item.storedPath,
@@ -264,16 +264,16 @@ function createSqliteBackend() {
         item.isDirectory ? 1 : 0,
       );
     },
-    async listQuarantine() {
-      return selectQuarantine.all().map((item) => ({
+    async listTrash() {
+      return selectTrash.all().map((item) => ({
         ...item,
         isDirectory: Boolean(item.isDirectory),
         deletedAt: normalizeDate(item.deletedAt),
         expiresAt: normalizeDate(item.expiresAt),
       }));
     },
-    async getQuarantineItem(id) {
-      const item = selectQuarantineItem.get(id);
+    async getTrashItem(id) {
+      const item = selectTrashItem.get(id);
       if (!item) return null;
       return {
         id: item.id,
@@ -286,8 +286,8 @@ function createSqliteBackend() {
         expiresAt: normalizeDate(item.expires_at),
       };
     },
-    async deleteQuarantineItem(id) {
-      deleteQuarantineItem.run(id);
+    async deleteTrashItem(id) {
+      deleteTrashItem.run(id);
     },
     async getDisabledStartupEntries() {
       return selectDisabled.all().map((row) => ({
@@ -440,7 +440,7 @@ function createMysqlBackend() {
         )
       `);
       await execute(`
-        CREATE TABLE IF NOT EXISTS quarantine_items (
+        CREATE TABLE IF NOT EXISTS trash_items (
           id CHAR(36) PRIMARY KEY,
           original_path LONGTEXT NOT NULL,
           stored_path LONGTEXT NOT NULL,
@@ -527,9 +527,9 @@ function createMysqlBackend() {
         createdAt: normalizeDate(row.createdAt),
       }));
     },
-    async insertQuarantineItem(item) {
+    async insertTrashItem(item) {
       await execute(`
-        INSERT INTO quarantine_items
+        INSERT INTO trash_items
           (id, original_path, stored_path, size_bytes, category, deleted_at, expires_at, is_directory)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `, [
@@ -543,11 +543,11 @@ function createMysqlBackend() {
         item.isDirectory ? 1 : 0,
       ]);
     },
-    async listQuarantine() {
+    async listTrash() {
       const rows = await query(`
         SELECT id, original_path AS originalPath, stored_path AS storedPath, size_bytes AS sizeBytes,
                category, deleted_at AS deletedAt, expires_at AS expiresAt, is_directory AS isDirectory
-        FROM quarantine_items ORDER BY deleted_at DESC
+        FROM trash_items ORDER BY deleted_at DESC
       `);
       return rows.map((item) => ({
         ...item,
@@ -556,8 +556,8 @@ function createMysqlBackend() {
         expiresAt: normalizeDate(item.expiresAt),
       }));
     },
-    async getQuarantineItem(id) {
-      const rows = await query('SELECT * FROM quarantine_items WHERE id = ? LIMIT 1', [id]);
+    async getTrashItem(id) {
+      const rows = await query('SELECT * FROM trash_items WHERE id = ? LIMIT 1', [id]);
       const item = rows[0];
       if (!item) return null;
       return {
@@ -571,8 +571,8 @@ function createMysqlBackend() {
         expiresAt: normalizeDate(item.expires_at),
       };
     },
-    async deleteQuarantineItem(id) {
-      await execute('DELETE FROM quarantine_items WHERE id = ?', [id]);
+    async deleteTrashItem(id) {
+      await execute('DELETE FROM trash_items WHERE id = ?', [id]);
     },
     async getDisabledStartupEntries() {
       const rows = await query(`
@@ -661,24 +661,24 @@ async function listActivity(limit) {
   return db.listActivity(limit);
 }
 
-async function insertQuarantineItem(item) {
+async function insertTrashItem(item) {
   const db = await initializeDatabase();
-  await db.insertQuarantineItem(item);
+  await db.insertTrashItem(item);
 }
 
-async function listQuarantine() {
+async function listTrash() {
   const db = await initializeDatabase();
-  return db.listQuarantine();
+  return db.listTrash();
 }
 
-async function getQuarantineItem(id) {
+async function getTrashItem(id) {
   const db = await initializeDatabase();
-  return db.getQuarantineItem(id);
+  return db.getTrashItem(id);
 }
 
-async function deleteQuarantineItem(id) {
+async function deleteTrashItem(id) {
   const db = await initializeDatabase();
-  await db.deleteQuarantineItem(id);
+  await db.deleteTrashItem(id);
 }
 
 async function getDisabledStartupEntries() {
@@ -717,13 +717,14 @@ module.exports = {
   updateSettings,
   logActivity,
   listActivity,
-  insertQuarantineItem,
-  listQuarantine,
-  getQuarantineItem,
-  deleteQuarantineItem,
+  insertTrashItem,
+  listTrash,
+  getTrashItem,
+  deleteTrashItem,
   getDisabledStartupEntries,
   getDisabledStartupEntryById,
   upsertDisabledStartupEntry,
   deleteDisabledStartupEntry,
   closeDatabase,
 };
+
