@@ -10,9 +10,9 @@ import { largeFiles, formatSize } from "@/lib/mock-data";
 export const Route = createFileRoute("/large-files")({
   head: () => ({
     meta: [
-      { title: "Large Files — Broomstick" },
+      { title: "Large Files — Free Win64 PC Cleaner" },
       { name: "description", content: "Find oversized files by size, age and type. Move to Quarantine, don't nuke." },
-      { property: "og:title", content: "Large Files — Broomstick" },
+      { property: "og:title", content: "Large Files — Free Win64 PC Cleaner" },
       { property: "og:description", content: "Find oversized files by size, age and type." },
     ],
   }),
