@@ -90,6 +90,7 @@ export const api = {
   applications: () => request<Application[]>('/api/applications'),
   uninstall: (id: string) => request<{ launched: boolean; name: string }>(`/api/applications/${id}/uninstall`, { method: 'POST' }),
   startup: () => request<StartupEntry[]>('/api/startup'),
+  toggleStartup: (id: string, enabled: boolean) => request<{ id: string; enabled: boolean }>(`/api/startup/${id}/toggle`, { method: 'POST', body: JSON.stringify({ enabled }) }),
   files: (path?: string) => request<DirectoryListing>(`/api/files${path ? `?path=${encodeURIComponent(path)}` : ''}`),
   createFolder: (parentPath: string, name: string) => request<{ path: string }>('/api/files/folder', { method: 'POST', body: JSON.stringify({ parentPath, name }) }),
   quarantineFile: (path: string) => request<QuarantineItem>('/api/files', { method: 'DELETE', body: JSON.stringify({ path }) }),
