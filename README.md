@@ -54,12 +54,16 @@ npm run frontend
 - Local API health and compatibility status.
 - Windows drive capacity and free-space discovery.
 - Installed desktop application inventory and official uninstaller launch.
-- Startup registry inventory.
+- Startup registry inventory with reversible enable and disable operations.
 - Real directory browsing and folder creation.
 - File copy, move and quarantine operations.
 - Cleanup scans for temporary files, thumbnail cache, DirectX cache, crash dumps, Windows error reports and browser caches.
 - SQLite-backed quarantine restore and permanent purge.
-- Large-file, duplicate-file and storage-usage scans.
-- SQLite-backed settings, protected paths and activity history.
+- Large-file, SHA-256 duplicate-file and storage-usage scans.
+- SQLite-backed settings, mandatory protected paths and activity history.
+
+## Validation
+
+Every push to `main` runs the Windows validation workflow. It installs the dependencies with Node.js 24 x64, checks the syntax of every backend module and builds the frontend on `windows-latest`.
 
 Some Windows locations require starting the terminal as Administrator. The backend reports access errors per item instead of silently deleting inaccessible data.
