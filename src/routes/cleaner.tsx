@@ -13,7 +13,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/cleaner")({
   head: () => ({ meta: [
     { title: "Cleaner — Free Win64 PC Cleaner" },
-    { name: "description", content: "Scan real Windows cleanup locations and move selected data to quarantine." },
+    { name: "description", content: "Scan real Windows cleanup locations and move selected data to Trash." },
   ] }),
   component: CleanerPage,
 });
@@ -48,12 +48,12 @@ function CleanerPage() {
   const clean = useMutation({
     mutationFn: () => api.clean(Object.entries(selected).filter(([, value]) => value).map(([id]) => id)),
     onSuccess: async (result) => {
-      toast.success(`Moved ${formatBytes(result.sizeBytes)} to Quarantine`);
+      toast.success(`Moved ${formatBytes(result.sizeBytes)} to Trash`);
       setSelected({});
       await Promise.all([
         client.invalidateQueries({ queryKey: ["cleaner-scan"] }),
         client.invalidateQueries({ queryKey: ["overview"] }),
-        client.invalidateQueries({ queryKey: ["quarantine"] }),
+        client.invalidateQueries({ queryKey: ["trash"] }),
       ]);
     },
     onError: (error) => toast.error(error.message),
@@ -63,7 +63,7 @@ function CleanerPage() {
     <PageShell
       eyebrow="Cleanup"
       title="Cleaner"
-      description="These values come from real Windows folders. Selected items are moved to the local quarantine and can be restored."
+      description="These values come from real Windows folders. Selected items are moved to the local Trash and can be restored."
       actions={<>
         <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => scan.refetch()} disabled={scan.isFetching}>
           <RotateCw className={`h-3.5 w-3.5 ${scan.isFetching ? "animate-spin" : ""}`} /> Rescan

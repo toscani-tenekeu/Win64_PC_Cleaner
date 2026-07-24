@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
-const { sizeOf, quarantinePath } = require('./filesystem.cjs');
+const { sizeOf, trashPath } = require('./filesystem.cjs');
 const { logActivity } = require('./database.cjs');
 
 function existing(paths) {
@@ -123,7 +123,7 @@ async function runCleanup(categoryIds) {
     const errors = [];
     for (const target of targets) {
       try {
-        const item = await quarantinePath(target, definition.name, { allowProtected: true });
+        const item = await trashPath(target, definition.name, { allowProtected: true });
         moved += 1;
         bytes += item.sizeBytes;
       } catch (error) {
@@ -133,7 +133,7 @@ async function runCleanup(categoryIds) {
     totalBytes += bytes;
     results.push({ id: definition.id, moved, sizeBytes: bytes, errors });
   }
-  await logActivity('Clean', 'Moved cleanup data to quarantine', totalBytes);
+  await logActivity('Trash', 'Moved cleanup data to trash', totalBytes);
   return { sizeBytes: totalBytes, results };
 }
 

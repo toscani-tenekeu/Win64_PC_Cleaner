@@ -67,7 +67,7 @@ When SQLite is selected, app data is stored outside the repo:
 ```text
 %LOCALAPPDATA%\FreeWin64PCCleaner\
 ├── data\cleaner.db
-└── quarantine\
+└── trash\
 ```
 
 ## Useful commands
@@ -83,7 +83,7 @@ bun run frontend
 - Installed application inventory and official uninstaller launch
 - Startup registry enable/disable with local persistence
 - File browser, copy, move, and folder creation
-- Quarantine for manual delete and cleanup operations
+- Trash for manual delete and cleanup operations
 - Cleanup scans for temp files, caches, crash dumps, and browser data
 - Large-file, duplicate-file, and storage-usage scans
 - Local settings with protected paths
@@ -93,3 +93,4 @@ bun run frontend
 - The app binds to `127.0.0.1` only.
 - Some cleanup actions need Administrator privileges.
 - If you switch database backends, keep the `.env` file in sync with the database you actually want to use.
+

@@ -16,9 +16,9 @@ import { toast } from "sonner";
 type LocalSettings = {
   theme: string;
   units: string;
-  quarantineRetentionDays: number;
+  trashRetentionDays: number;
   confirmDestructiveActions: boolean;
-  moveToQuarantine: boolean;
+  moveToTrash: boolean;
   duplicateHashAlgorithm: string;
   scanMaxFiles: number;
   protectedPaths: string[];
@@ -27,9 +27,9 @@ type LocalSettings = {
 const defaults: LocalSettings = {
   theme: "dark",
   units: "binary",
-  quarantineRetentionDays: 30,
+  trashRetentionDays: 30,
   confirmDestructiveActions: true,
-  moveToQuarantine: true,
+  moveToTrash: true,
   duplicateHashAlgorithm: "sha256",
   scanMaxFiles: 50000,
   protectedPaths: [],
@@ -39,7 +39,7 @@ export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
       { title: "Settings - Free Win64 PC Cleaner" },
-      { name: "description", content: "Local database settings, protected folders and quarantine behavior." },
+      { name: "description", content: "Local database settings, protected folders and Trash behavior." },
     ],
   }),
   component: SettingsPage,
@@ -102,9 +102,9 @@ function SettingsPage() {
         <Card className="p-5">
           <span className="label-eyebrow">Safety</span>
           <div className="mt-4 space-y-4">
-            <SettingRow label="Move to Quarantine before delete" hint="Recommended and used by the file manager and cleaner."><Switch checked={settings.moveToQuarantine} onCheckedChange={(value) => setSettings((current) => ({ ...current, moveToQuarantine: value }))} /></SettingRow>
+            <SettingRow label="Move to Trash before delete" hint="Recommended and used by the file manager and cleaner."><Switch checked={settings.moveToTrash} onCheckedChange={(value) => setSettings((current) => ({ ...current, moveToTrash: value }))} /></SettingRow>
             <SettingRow label="Confirm destructive actions" hint="Keep explicit confirmation in the UI."><Switch checked={settings.confirmDestructiveActions} onCheckedChange={(value) => setSettings((current) => ({ ...current, confirmDestructiveActions: value }))} /></SettingRow>
-            <SettingRow label="Quarantine retention" hint="Days before an item becomes eligible for purge."><Input type="number" min={1} max={3650} value={settings.quarantineRetentionDays} onChange={(event) => setSettings((current) => ({ ...current, quarantineRetentionDays: Number(event.target.value || 30) }))} className="w-24" /></SettingRow>
+            <SettingRow label="Trash retention" hint="Days before an item becomes eligible for purge."><Input type="number" min={1} max={3650} value={settings.trashRetentionDays} onChange={(event) => setSettings((current) => ({ ...current, trashRetentionDays: Number(event.target.value || 30) }))} className="w-24" /></SettingRow>
             <SettingRow label="Scan file limit" hint="Upper bound used by large-file and duplicate scans."><Input type="number" min={1000} max={250000} step={1000} value={settings.scanMaxFiles} onChange={(event) => setSettings((current) => ({ ...current, scanMaxFiles: Number(event.target.value || 50000) }))} className="w-28" /></SettingRow>
             <SettingRow label="Duplicate hash" hint="Cryptographic verification after size grouping.">
               <Select value={settings.duplicateHashAlgorithm} onValueChange={(value) => setSettings((current) => ({ ...current, duplicateHashAlgorithm: value }))}>

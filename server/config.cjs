@@ -60,5 +60,5 @@ module.exports = {
   appRoot,
   databasePath: databaseClient === 'sqlite' ? sqliteDatabasePath : null,
   databaseLabel: describeDatabase(),
-  quarantineRoot: path.join(appRoot, 'quarantine'),
+  trashRoot: path.join(appRoot, 'trash'),
 };

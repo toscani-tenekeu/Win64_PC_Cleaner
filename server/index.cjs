@@ -13,8 +13,8 @@ const {
 } = require('./database.cjs');
 const { getDrives, getApplications, launchUninstaller, getStartupEntries, toggleStartup } = require('./windows.cjs');
 const {
-  listDirectory, createFolder, copyPath, movePath, quarantinePath,
-  listQuarantine, restoreQuarantine, purgeQuarantine,
+  listDirectory, createFolder, copyPath, movePath, trashPath,
+  listTrash, restoreTrash, purgeTrash,
   walkFiles, findLargeFiles, findDuplicates, sizeOf,
 } = require('./filesystem.cjs');
 const { scanCleaner, runCleanup } = require('./cleaner.cjs');
@@ -83,9 +83,9 @@ app.post('/api/files/move', asyncRoute(async (req, res) => {
   res.json(await movePath(req.body.sourcePath, req.body.destinationPath));
 }));
 
-app.delete('/api/files', asyncRoute(async (req, res) => {
-  const item = await quarantinePath(req.body.path, req.body.category || 'Manual file operation');
-  await logActivity('Quarantine', item.originalPath, item.sizeBytes);
+app.delete('/api/trash', asyncRoute(async (req, res) => {
+  const item = await trashPath(req.body.path, req.body.category || 'Manual file operation');
+  await logActivity('Trash', item.originalPath, item.sizeBytes);
   res.json(item);
 }));
 
@@ -97,16 +97,16 @@ app.post('/api/cleaner/run', asyncRoute(async (req, res) => {
   res.json(await runCleanup(req.body.categoryIds));
 }));
 
-app.get('/api/quarantine', asyncRoute(async (req, res) => {
-  res.json(await listQuarantine());
+app.get('/api/trash', asyncRoute(async (req, res) => {
+  res.json(await listTrash());
 }));
 
-app.post('/api/quarantine/:id/restore', asyncRoute(async (req, res) => {
-  res.json(await restoreQuarantine(req.params.id));
+app.post('/api/trash/:id/restore', asyncRoute(async (req, res) => {
+  res.json(await restoreTrash(req.params.id));
 }));
 
-app.delete('/api/quarantine/:id', asyncRoute(async (req, res) => {
-  res.json(await purgeQuarantine(req.params.id));
+app.delete('/api/trash/:id', asyncRoute(async (req, res) => {
+  res.json(await purgeTrash(req.params.id));
 }));
 
 app.get('/api/settings', (req, res) => {
@@ -172,13 +172,13 @@ app.post('/api/scans/storage', asyncRoute(async (req, res) => {
 }));
 
 app.get('/api/overview', asyncRoute(async (req, res) => {
-  const [drives, cleanupCategories, quarantine, activity] = await Promise.all([
+  const [drives, cleanupCategories, trash, activity] = await Promise.all([
     getDrives(),
     scanCleaner({ log: false }),
-    listQuarantine(),
+    listTrash(),
     listActivity(10),
   ]);
-  res.json({ drives, cleanupCategories, quarantine, activity });
+  res.json({ drives, cleanupCategories, trash, activity });
 }));
 
 app.use((req, res) => {
@@ -187,7 +187,11 @@ app.use((req, res) => {
 
 app.use((error, req, res, next) => {
   const status = Number(error.status || (error.code === 'ENOENT' ? 404 : 500));
-  console.error(`[${new Date().toISOString()}]`, error);
+  if (status >= 500) {
+    console.error(`[${new Date().toISOString()}]`, error);
+  } else {
+    console.warn(`[${new Date().toISOString()}] ${status} ${error.message || 'Request failed'}`);
+  }
   res.status(status).json({
     error: error.message || 'Unexpected backend error',
     code: error.code || null,

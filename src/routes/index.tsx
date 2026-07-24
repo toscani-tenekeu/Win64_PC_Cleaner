@@ -20,7 +20,7 @@ function OverviewPage() {
   const drives = overview.data?.drives ?? [];
   const categories = overview.data?.cleanupCategories ?? [];
   const activity = overview.data?.activity ?? [];
-  const quarantine = overview.data?.quarantine ?? [];
+  const trash = overview.data?.trash ?? [];
   const totalGB = drives.reduce((sum, drive) => sum + drive.totalGB, 0);
   const usedGB = drives.reduce((sum, drive) => sum + drive.usedGB, 0);
   const freeGB = drives.reduce((sum, drive) => sum + drive.freeGB, 0);
@@ -30,7 +30,7 @@ function OverviewPage() {
     <PageShell
       eyebrow="Dashboard"
       title="Overview"
-      description="Live data from this Windows PC. Cleanup operations move selected items to the local quarantine first."
+      description="Live data from this Windows PC. Cleanup operations move selected items to the local trash first."
       actions={<Link to="/cleaner" className="inline-flex items-center gap-2 rounded-md bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90">Run cleanup <ArrowRight className="h-3.5 w-3.5" /></Link>}
     >
       {overview.isError ? <Card className="border-destructive/40 p-4 text-sm text-destructive">Backend unavailable: {overview.error.message}</Card> : null}
@@ -38,7 +38,7 @@ function OverviewPage() {
         <Stat label="Total capacity" value={totalGB ? `${totalGB.toFixed(1)} GB` : "—"} hint={`${drives.length} drives`} />
         <Stat label="Used" value={usedGB ? `${usedGB.toFixed(1)} GB` : "—"} hint={totalGB ? `${((usedGB / totalGB) * 100).toFixed(1)}%` : "waiting for backend"} />
         <Stat label="Free" value={freeGB ? `${freeGB.toFixed(1)} GB` : "—"} tone="success" />
-        <Stat label="Recoverable" value={formatBytes(recoverableBytes)} tone="warning" hint="moves to quarantine" />
+        <Stat label="Recoverable" value={formatBytes(recoverableBytes)} tone="warning" hint="moves to trash" />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
@@ -87,9 +87,9 @@ function OverviewPage() {
           <span className="label-eyebrow">Safety</span>
           <ul className="mt-3 space-y-3 text-sm">
             <HealthRow label="Backend" value={overview.isSuccess ? "Connected" : overview.isPending ? "Connecting" : "Offline"} tone={overview.isSuccess ? "success" : "destructive"} />
-            <HealthRow label="Quarantine" value={`${quarantine.length} items`} tone={quarantine.length ? "warning" : "success"} />
+            <HealthRow label="Trash" value={`${trash.length} items`} tone={trash.length ? "warning" : "success"} />
             <HealthRow label="Authentication" value="None · local only" tone="success" />
-            <HealthRow label="Cleanup mode" value="Quarantine first" tone="success" />
+            <HealthRow label="Cleanup mode" value="Trash first" tone="success" />
           </ul>
         </Card>
       </section>

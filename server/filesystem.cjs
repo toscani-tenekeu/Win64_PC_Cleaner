@@ -7,10 +7,10 @@ const config = require('./config.cjs');
 const {
   getSettings,
   logActivity,
-  insertQuarantineItem,
-  listQuarantine: listQuarantineRows,
-  getQuarantineItem,
-  deleteQuarantineItem,
+  insertTrashItem,
+  listTrash: listTrashRows,
+  getTrashItem,
+  deleteTrashItem,
 } = require('./database.cjs');
 
 function normalizePath(value) {
@@ -144,12 +144,12 @@ async function movePath(sourcePath, destinationPath) {
   return { source, destination };
 }
 
-async function quarantinePath(inputPath, category = 'Manual', options = {}) {
+async function trashPath(inputPath, category = 'Manual', options = {}) {
   const originalPath = normalizePath(inputPath);
   if (!options.allowProtected) assertNotProtected(originalPath);
   const stat = await fsp.lstat(originalPath);
   const id = crypto.randomUUID();
-  const storedPath = path.join(config.quarantineRoot, id);
+  const storedPath = path.join(config.trashRoot, id);
   const { bytes } = await sizeOf(originalPath);
   try {
     await fsp.rename(originalPath, storedPath);
@@ -158,10 +158,10 @@ async function quarantinePath(inputPath, category = 'Manual', options = {}) {
     await fsp.cp(originalPath, storedPath, { recursive: true, errorOnExist: true });
     await fsp.rm(originalPath, { recursive: true, force: false });
   }
-  const retentionDays = Number(getSettings().quarantineRetentionDays || 30);
+  const retentionDays = Number(getSettings().trashRetentionDays || 30);
   const deletedAt = new Date();
   const expiresAt = new Date(deletedAt.getTime() + retentionDays * 86400000);
-  await insertQuarantineItem({
+  await insertTrashItem({
     id,
     originalPath,
     storedPath,
@@ -174,14 +174,14 @@ async function quarantinePath(inputPath, category = 'Manual', options = {}) {
   return { id, originalPath, storedPath, sizeBytes: bytes, category };
 }
 
-async function listQuarantine() {
-  return listQuarantineRows();
+async function listTrash() {
+  return listTrashRows();
 }
 
-async function restoreQuarantine(id) {
-  const item = await getQuarantineItem(id);
+async function restoreTrash(id) {
+  const item = await getTrashItem(id);
   if (!item) {
-    const error = new Error('Quarantine item not found.');
+    const error = new Error('Trash item not found.');
     error.status = 404;
     throw error;
   }
@@ -198,20 +198,20 @@ async function restoreQuarantine(id) {
     await fsp.cp(item.storedPath, item.originalPath, { recursive: true, errorOnExist: true });
     await fsp.rm(item.storedPath, { recursive: true, force: true });
   }
-  await deleteQuarantineItem(id);
+  await deleteTrashItem(id);
   await logActivity('Restore', item.originalPath);
   return { restored: true, path: item.originalPath };
 }
 
-async function purgeQuarantine(id) {
-  const item = await getQuarantineItem(id);
+async function purgeTrash(id) {
+  const item = await getTrashItem(id);
   if (!item) {
-    const error = new Error('Quarantine item not found.');
+    const error = new Error('Trash item not found.');
     error.status = 404;
     throw error;
   }
   await fsp.rm(item.storedPath, { recursive: true, force: true });
-  await deleteQuarantineItem(id);
+  await deleteTrashItem(id);
   await logActivity('Purge', item.originalPath, item.sizeBytes);
   return { purged: true, sizeBytes: item.sizeBytes };
 }
@@ -296,10 +296,10 @@ module.exports = {
   createFolder,
   copyPath,
   movePath,
-  quarantinePath,
-  listQuarantine,
-  restoreQuarantine,
-  purgeQuarantine,
+  trashPath,
+  listTrash,
+  restoreTrash,
+  purgeTrash,
   walkFiles,
   findLargeFiles,
   findDuplicates,

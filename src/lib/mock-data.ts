@@ -155,7 +155,7 @@ export const startupEntries: StartupEntry[] = [
   { id: "teams", name: "Microsoft Teams", publisher: "Microsoft", path: "%LOCALAPPDATA%\\Microsoft\\Teams\\Update.exe", enabled: false, impact: "medium", source: "registry" },
 ];
 
-export type QuarantineItem = {
+export type TrashItem = {
   id: string;
   originalPath: string;
   sizeMB: number;
@@ -164,7 +164,7 @@ export type QuarantineItem = {
   expiresAt: string;
 };
 
-export const quarantine: QuarantineItem[] = [
+export const trash: TrashItem[] = [
   { id: "q1", originalPath: "C:\\Users\\alex\\AppData\\Local\\Temp\\setup_9182.tmp", sizeMB: 128, deletedAt: "2026-07-22 14:02", category: "User temp", expiresAt: "2026-08-21" },
   { id: "q2", originalPath: "C:\\Windows\\SoftwareDistribution\\Download\\3a8...", sizeMB: 2410, deletedAt: "2026-07-20 09:41", category: "Windows Update cache", expiresAt: "2026-08-19" },
   { id: "q3", originalPath: "C:\\Users\\alex\\Downloads\\old-installer.exe", sizeMB: 84, deletedAt: "2026-07-18 22:15", category: "Installer leftovers", expiresAt: "2026-08-17" },
@@ -181,7 +181,7 @@ export const activity: Activity[] = [
   { when: "2026-07-24 08:12", action: "Scan", detail: "Full storage analysis on C:\\, D:\\" },
   { when: "2026-07-22 14:02", action: "Clean", detail: "User temp + browser cache", freedMB: 3820 },
   { when: "2026-07-20 09:41", action: "Clean", detail: "Windows Update cache", freedMB: 6410 },
-  { when: "2026-07-18 22:15", action: "Duplicates", detail: "Moved 12 duplicates to quarantine", freedMB: 942 },
+  { when: "2026-07-18 22:15", action: "Duplicates", detail: "Moved 12 duplicates to trash", freedMB: 942 },
   { when: "2026-07-15 10:03", action: "Startup", detail: "Disabled Steam auto-launch" },
 ];
 
@@ -194,3 +194,4 @@ export function formatGB(gb: number): string {
   if (gb >= 1024) return `${(gb / 1024).toFixed(2)} TB`;
   return `${gb.toFixed(1)} GB`;
 }
+
