@@ -13,9 +13,9 @@ import { useState } from "react";
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — Broomstick" },
+      { title: "Settings — Free Win64 PC Cleaner" },
       { name: "description", content: "Theme, units, protected folders and quarantine behavior." },
-      { property: "og:title", content: "Settings — Broomstick" },
+      { property: "og:title", content: "Settings — Free Win64 PC Cleaner" },
       { property: "og:description", content: "Theme, units, protected folders and quarantine behavior." },
     ],
   }),
@@ -110,7 +110,7 @@ function SettingsPage() {
             <Input
               value={newPath}
               onChange={(e) => setNewPath(e.target.value)}
-              placeholder="C:\path\to\protect"
+              placeholder="C:\\path\\to\\protect"
               className="font-mono text-xs"
             />
             <Button
