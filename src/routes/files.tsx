@@ -23,9 +23,9 @@ import {
 export const Route = createFileRoute("/files")({
   head: () => ({
     meta: [
-      { title: "File Manager — Broomstick" },
+      { title: "File Manager — Free Win64 PC Cleaner" },
       { name: "description", content: "Browse drives and folders with dual-pane, breadcrumb navigation." },
-      { property: "og:title", content: "File Manager — Broomstick" },
+      { property: "og:title", content: "File Manager — Free Win64 PC Cleaner" },
       { property: "og:description", content: "Browse drives and folders with dual-pane navigation." },
     ],
   }),
