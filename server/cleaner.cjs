@@ -85,7 +85,7 @@ async function collectChildren(definition) {
   return results;
 }
 
-async function scanCleaner() {
+async function scanCleaner(options = {}) {
   const categories = [];
   for (const definition of cleanupDefinitions()) {
     const targets = await collectChildren(definition);
@@ -107,7 +107,7 @@ async function scanCleaner() {
       available: definition.roots.length > 0,
     });
   }
-  logActivity('Scan', `Cleaner scan completed (${categories.length} categories)`);
+  if (options.log !== false) logActivity('Scan', `Cleaner scan completed (${categories.length} categories)`);
   return categories;
 }
 
