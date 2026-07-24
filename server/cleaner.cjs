@@ -9,6 +9,21 @@ function existing(paths) {
   return [...new Set(paths.filter(Boolean).map((value) => path.resolve(value)))].filter((value) => fs.existsSync(value));
 }
 
+function firefoxCacheRoots(roaming) {
+  const profilesRoot = path.join(roaming, 'Mozilla', 'Firefox', 'Profiles');
+  if (!fs.existsSync(profilesRoot)) return [];
+  try {
+    return fs.readdirSync(profilesRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .flatMap((entry) => [
+        path.join(profilesRoot, entry.name, 'cache2'),
+        path.join(profilesRoot, entry.name, 'startupCache'),
+      ]);
+  } catch {
+    return [];
+  }
+}
+
 function cleanupDefinitions() {
   const local = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
   const roaming = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
@@ -51,7 +66,7 @@ function cleanupDefinitions() {
       roots: existing([
         path.join(local, 'Google', 'Chrome', 'User Data', 'Default', 'Cache'),
         path.join(local, 'Microsoft', 'Edge', 'User Data', 'Default', 'Cache'),
-        path.join(roaming, 'Mozilla', 'Firefox', 'Profiles'),
+        ...firefoxCacheRoots(roaming),
       ]),
     },
   ];
