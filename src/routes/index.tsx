@@ -11,17 +11,17 @@ import {
   formatGB,
   formatSize,
 } from "@/lib/mock-data";
-import { ArrowRight, Sparkles, Copy, FileBox } from "lucide-react";
+import { ArrowRight, Trash2, Copy, FileBox } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Overview — Broomstick" },
+      { title: "Overview — Free Win64 PC Cleaner" },
       {
         name: "description",
         content: "At-a-glance view of storage, recoverable space and recent cleanup activity.",
       },
-      { property: "og:title", content: "Overview — Broomstick" },
+      { property: "og:title", content: "Overview — Free Win64 PC Cleaner" },
       {
         property: "og:description",
         content: "At-a-glance view of storage, recoverable space and recent activity.",
@@ -98,7 +98,7 @@ function OverviewPage() {
         <Card className="p-5">
           <span className="label-eyebrow">Quick actions</span>
           <div className="mt-3 flex flex-col gap-2">
-            <QuickAction to="/cleaner" icon={Sparkles} title="Clean temp files" value={formatSize(recoverableMB)} />
+            <QuickAction to="/cleaner" icon={Trash2} title="Clean temp files" value={formatSize(recoverableMB)} />
             <QuickAction to="/duplicates" icon={Copy} title="Review duplicates" value={formatSize(dupMB)} />
             <QuickAction to="/large-files" icon={FileBox} title="Find large files" value="Top 5 shown" />
           </div>
