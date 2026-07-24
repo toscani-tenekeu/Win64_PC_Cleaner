@@ -7,9 +7,9 @@ import { drives, usageByType, largestFolders, formatGB } from "@/lib/mock-data";
 export const Route = createFileRoute("/storage")({
   head: () => ({
     meta: [
-      { title: "Storage Analyzer — Broomstick" },
+      { title: "Storage Analyzer — Free Win64 PC Cleaner" },
       { name: "description", content: "Where the space actually goes — by drive, type and folder." },
-      { property: "og:title", content: "Storage Analyzer — Broomstick" },
+      { property: "og:title", content: "Storage Analyzer — Free Win64 PC Cleaner" },
       { property: "og:description", content: "Where the space actually goes — by drive, type and folder." },
     ],
   }),
