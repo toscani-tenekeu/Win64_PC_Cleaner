@@ -3,7 +3,7 @@ import {
   LayoutDashboard,
   FolderTree,
   PieChart,
-  Sparkles,
+  Trash2,
   Copy,
   FileBox,
   Package,
@@ -30,7 +30,7 @@ const overview = [{ title: "Overview", url: "/", icon: LayoutDashboard }];
 const manage = [
   { title: "File Manager", url: "/files", icon: FolderTree },
   { title: "Storage Analyzer", url: "/storage", icon: PieChart },
-  { title: "Cleaner", url: "/cleaner", icon: Sparkles },
+  { title: "Cleaner", url: "/cleaner", icon: Trash2 },
   { title: "Duplicates", url: "/duplicates", icon: Copy },
   { title: "Large Files", url: "/large-files", icon: FileBox },
 ];
@@ -79,7 +79,7 @@ export function AppSidebar() {
             <HardDrive className="h-4 w-4" />
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold tracking-tight">Broomstick</span>
+            <span className="text-sm font-semibold tracking-tight">Free Win64 PC Cleaner</span>
             <span className="text-[10px] text-muted-foreground font-mono">v0.1 · win64</span>
           </div>
         </div>
