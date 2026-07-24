@@ -41,6 +41,15 @@ db.exec(`
     freed_bytes INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS disabled_startup (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    command TEXT NOT NULL,
+    registry_path TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    disabled_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 const defaults = {
@@ -64,6 +73,7 @@ const defaultProtectedPaths = [
   process.env.WINDIR || 'C:\\Windows',
   process.env.ProgramFiles || 'C:\\Program Files',
   process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)',
+  config.appRoot,
 ];
 const insertProtected = db.prepare('INSERT OR IGNORE INTO protected_paths (path) VALUES (?)');
 for (const protectedPath of defaultProtectedPaths) insertProtected.run(protectedPath);
@@ -92,7 +102,7 @@ function updateSettings(patch) {
     }
     if (Array.isArray(patch.protectedPaths)) {
       db.prepare('DELETE FROM protected_paths').run();
-      for (const value of patch.protectedPaths) {
+      for (const value of [...patch.protectedPaths, config.appRoot]) {
         if (typeof value === 'string' && value.trim()) insertProtected.run(value.trim());
       }
     }
