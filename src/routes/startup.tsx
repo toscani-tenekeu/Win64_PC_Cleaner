@@ -9,9 +9,9 @@ import { startupEntries as initial } from "@/lib/mock-data";
 export const Route = createFileRoute("/startup")({
   head: () => ({
     meta: [
-      { title: "Startup — Broomstick" },
+      { title: "Startup — Free Win64 PC Cleaner" },
       { name: "description", content: "Manage what runs at Windows login. Toggle without deleting entries." },
-      { property: "og:title", content: "Startup — Broomstick" },
+      { property: "og:title", content: "Startup — Free Win64 PC Cleaner" },
       { property: "og:description", content: "Manage what runs at Windows login." },
     ],
   }),
