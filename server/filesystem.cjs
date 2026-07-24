@@ -22,8 +22,14 @@ function isInside(candidate, parent) {
 }
 
 function assertNotProtected(target) {
+  const resolved = path.resolve(target);
+  if (path.parse(resolved).root.toLowerCase() === resolved.toLowerCase()) {
+    const error = new Error('Drive roots cannot be modified by the cleaner.');
+    error.status = 403;
+    throw error;
+  }
   const settings = getSettings();
-  const normalized = path.resolve(target).toLowerCase();
+  const normalized = resolved.toLowerCase();
   for (const protectedPath of settings.protectedPaths || []) {
     const protectedNormalized = path.resolve(protectedPath).toLowerCase();
     if (normalized === protectedNormalized || isInside(normalized, protectedNormalized)) {
