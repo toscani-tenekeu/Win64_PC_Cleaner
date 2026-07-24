@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/startup")({
@@ -19,7 +20,8 @@ export const Route = createFileRoute("/startup")({
 
 function StartupPage() {
   const client = useQueryClient();
-  const query = useQuery({ queryKey: ["startup"], queryFn: api.startup, enabled: typeof window !== "undefined" });
+  const hydrated = useHydrated();
+  const query = useQuery({ queryKey: ["startup"], queryFn: api.startup, enabled: hydrated });
   const entries = query.data ?? [];
   const enabled = entries.filter((entry) => entry.enabled).length;
   const toggle = useMutation({

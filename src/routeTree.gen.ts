@@ -9,10 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TrashRouteImport } from './routes/trash'
 import { Route as StorageRouteImport } from './routes/storage'
 import { Route as StartupRouteImport } from './routes/startup'
 import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as TrashRouteImport } from './routes/trash'
 import { Route as LargeFilesRouteImport } from './routes/large-files'
 import { Route as FilesRouteImport } from './routes/files'
 import { Route as DuplicatesRouteImport } from './routes/duplicates'
@@ -20,6 +20,11 @@ import { Route as CleanerRouteImport } from './routes/cleaner'
 import { Route as ApplicationsRouteImport } from './routes/applications'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TrashRoute = TrashRouteImport.update({
+  id: '/trash',
+  path: '/trash',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StorageRoute = StorageRouteImport.update({
   id: '/storage',
   path: '/storage',
@@ -33,11 +38,6 @@ const StartupRoute = StartupRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TrashRoute = TrashRouteImport.update({
-  id: '/trash',
-  path: '/trash',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LargeFilesRoute = LargeFilesRouteImport.update({
@@ -78,10 +78,10 @@ export interface FileRoutesByFullPath {
   '/duplicates': typeof DuplicatesRoute
   '/files': typeof FilesRoute
   '/large-files': typeof LargeFilesRoute
-  '/trash': typeof TrashRoute
   '/settings': typeof SettingsRoute
   '/startup': typeof StartupRoute
   '/storage': typeof StorageRoute
+  '/trash': typeof TrashRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -90,10 +90,10 @@ export interface FileRoutesByTo {
   '/duplicates': typeof DuplicatesRoute
   '/files': typeof FilesRoute
   '/large-files': typeof LargeFilesRoute
-  '/trash': typeof TrashRoute
   '/settings': typeof SettingsRoute
   '/startup': typeof StartupRoute
   '/storage': typeof StorageRoute
+  '/trash': typeof TrashRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -103,10 +103,10 @@ export interface FileRoutesById {
   '/duplicates': typeof DuplicatesRoute
   '/files': typeof FilesRoute
   '/large-files': typeof LargeFilesRoute
-  '/trash': typeof TrashRoute
   '/settings': typeof SettingsRoute
   '/startup': typeof StartupRoute
   '/storage': typeof StorageRoute
+  '/trash': typeof TrashRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,10 +117,10 @@ export interface FileRouteTypes {
     | '/duplicates'
     | '/files'
     | '/large-files'
-    | '/trash'
     | '/settings'
     | '/startup'
     | '/storage'
+    | '/trash'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,10 +129,10 @@ export interface FileRouteTypes {
     | '/duplicates'
     | '/files'
     | '/large-files'
-    | '/trash'
     | '/settings'
     | '/startup'
     | '/storage'
+    | '/trash'
   id:
     | '__root__'
     | '/'
@@ -141,10 +141,10 @@ export interface FileRouteTypes {
     | '/duplicates'
     | '/files'
     | '/large-files'
-    | '/trash'
     | '/settings'
     | '/startup'
     | '/storage'
+    | '/trash'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -154,14 +154,21 @@ export interface RootRouteChildren {
   DuplicatesRoute: typeof DuplicatesRoute
   FilesRoute: typeof FilesRoute
   LargeFilesRoute: typeof LargeFilesRoute
-  TrashRoute: typeof TrashRoute
   SettingsRoute: typeof SettingsRoute
   StartupRoute: typeof StartupRoute
   StorageRoute: typeof StorageRoute
+  TrashRoute: typeof TrashRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/trash': {
+      id: '/trash'
+      path: '/trash'
+      fullPath: '/trash'
+      preLoaderRoute: typeof TrashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/storage': {
       id: '/storage'
       path: '/storage'
@@ -181,13 +188,6 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/trash': {
-      id: '/trash'
-      path: '/trash'
-      fullPath: '/trash'
-      preLoaderRoute: typeof TrashRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/large-files': {
@@ -242,10 +242,10 @@ const rootRouteChildren: RootRouteChildren = {
   DuplicatesRoute: DuplicatesRoute,
   FilesRoute: FilesRoute,
   LargeFilesRoute: LargeFilesRoute,
-  TrashRoute: TrashRoute,
   SettingsRoute: SettingsRoute,
   StartupRoute: StartupRoute,
   StorageRoute: StorageRoute,
+  TrashRoute: TrashRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
@@ -260,4 +260,3 @@ declare module '@tanstack/react-start' {
     config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }
-

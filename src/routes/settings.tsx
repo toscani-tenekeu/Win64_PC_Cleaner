@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { Plus, X, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -47,8 +48,9 @@ export const Route = createFileRoute("/settings")({
 
 function SettingsPage() {
   const client = useQueryClient();
-  const query = useQuery({ queryKey: ["settings"], queryFn: api.settings, enabled: typeof window !== "undefined" });
-  const health = useQuery({ queryKey: ["health"], queryFn: api.health, enabled: typeof window !== "undefined" });
+  const hydrated = useHydrated();
+  const query = useQuery({ queryKey: ["settings"], queryFn: api.settings, enabled: hydrated });
+  const health = useQuery({ queryKey: ["backend-health"], queryFn: api.health, enabled: hydrated });
   const [settings, setSettings] = useState<LocalSettings>(defaults);
   const [newPath, setNewPath] = useState("");
 
@@ -62,7 +64,7 @@ function SettingsPage() {
       setSettings({ ...defaults, ...(saved as Partial<LocalSettings>) });
       toast.success("Settings saved");
       await client.invalidateQueries({ queryKey: ["settings"] });
-      await client.invalidateQueries({ queryKey: ["health"] });
+      await client.invalidateQueries({ queryKey: ["backend-health"] });
     },
     onError: (error) => toast.error(error.message),
   });
@@ -87,13 +89,20 @@ function SettingsPage() {
             <SettingRow label="Theme" hint="Stored for the local application UI.">
               <Select value={settings.theme} onValueChange={(value) => setSettings((current) => ({ ...current, theme: value }))}>
                 <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="dark">Dark</SelectItem><SelectItem value="light">Light</SelectItem><SelectItem value="system">System</SelectItem></SelectContent>
+                <SelectContent>
+                  <SelectItem value="dark">Dark</SelectItem>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="system">System</SelectItem>
+                </SelectContent>
               </Select>
             </SettingRow>
             <SettingRow label="Units" hint="Binary uses 1024; decimal uses 1000.">
               <Select value={settings.units} onValueChange={(value) => setSettings((current) => ({ ...current, units: value }))}>
                 <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="binary">Binary (GiB)</SelectItem><SelectItem value="decimal">Decimal (GB)</SelectItem></SelectContent>
+                <SelectContent>
+                  <SelectItem value="binary">Binary (GiB)</SelectItem>
+                  <SelectItem value="decimal">Decimal (GB)</SelectItem>
+                </SelectContent>
               </Select>
             </SettingRow>
           </div>
@@ -102,10 +111,18 @@ function SettingsPage() {
         <Card className="p-5">
           <span className="label-eyebrow">Safety</span>
           <div className="mt-4 space-y-4">
-            <SettingRow label="Move to Trash before delete" hint="Recommended and used by the file manager and cleaner."><Switch checked={settings.moveToTrash} onCheckedChange={(value) => setSettings((current) => ({ ...current, moveToTrash: value }))} /></SettingRow>
-            <SettingRow label="Confirm destructive actions" hint="Keep explicit confirmation in the UI."><Switch checked={settings.confirmDestructiveActions} onCheckedChange={(value) => setSettings((current) => ({ ...current, confirmDestructiveActions: value }))} /></SettingRow>
-            <SettingRow label="Trash retention" hint="Days before an item becomes eligible for purge."><Input type="number" min={1} max={3650} value={settings.trashRetentionDays} onChange={(event) => setSettings((current) => ({ ...current, trashRetentionDays: Number(event.target.value || 30) }))} className="w-24" /></SettingRow>
-            <SettingRow label="Scan file limit" hint="Upper bound used by large-file and duplicate scans."><Input type="number" min={1000} max={250000} step={1000} value={settings.scanMaxFiles} onChange={(event) => setSettings((current) => ({ ...current, scanMaxFiles: Number(event.target.value || 50000) }))} className="w-28" /></SettingRow>
+            <SettingRow label="Move to Trash before delete" hint="Recommended and used by the file manager and cleaner.">
+              <Switch checked={settings.moveToTrash} onCheckedChange={(value) => setSettings((current) => ({ ...current, moveToTrash: value }))} />
+            </SettingRow>
+            <SettingRow label="Confirm destructive actions" hint="Keep explicit confirmation in the UI.">
+              <Switch checked={settings.confirmDestructiveActions} onCheckedChange={(value) => setSettings((current) => ({ ...current, confirmDestructiveActions: value }))} />
+            </SettingRow>
+            <SettingRow label="Trash retention" hint="Days before an item becomes eligible for purge.">
+              <Input type="number" min={1} max={3650} value={settings.trashRetentionDays} onChange={(event) => setSettings((current) => ({ ...current, trashRetentionDays: Number(event.target.value || 30) }))} className="w-24" />
+            </SettingRow>
+            <SettingRow label="Scan file limit" hint="Upper bound used by large-file and duplicate scans.">
+              <Input type="number" min={1000} max={250000} step={1000} value={settings.scanMaxFiles} onChange={(event) => setSettings((current) => ({ ...current, scanMaxFiles: Number(event.target.value || 50000) }))} className="w-28" />
+            </SettingRow>
             <SettingRow label="Duplicate hash" hint="Cryptographic verification after size grouping.">
               <Select value={settings.duplicateHashAlgorithm} onValueChange={(value) => setSettings((current) => ({ ...current, duplicateHashAlgorithm: value }))}>
                 <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
@@ -130,13 +147,16 @@ function SettingsPage() {
           </div>
           <div className="mt-4 flex gap-2">
             <Input value={newPath} onChange={(event) => setNewPath(event.target.value)} placeholder="C:\\path\\to\\protect" className="font-mono text-xs" />
-            <Button variant="secondary" onClick={() => {
-              const value = newPath.trim();
-              if (value && !settings.protectedPaths.includes(value)) {
-                setSettings((current) => ({ ...current, protectedPaths: [...current.protectedPaths, value] }));
-                setNewPath("");
-              }
-            }}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                const value = newPath.trim();
+                if (value && !settings.protectedPaths.includes(value)) {
+                  setSettings((current) => ({ ...current, protectedPaths: [...current.protectedPaths, value] }));
+                  setNewPath("");
+                }
+              }}
+            >
               <Plus className="mr-1 h-3.5 w-3.5" />
               Add
             </Button>
@@ -150,7 +170,7 @@ function SettingsPage() {
             <InfoRow k="Backend" v="Node.js + Express" />
             <InfoRow k="Database" v={health.data?.database || "Local database"} />
             <InfoRow k="Target" v="Windows 10/11 x64" />
-            <InfoRow k="Authentication" v="None, local only" />
+            <InfoRow k="Authentication" v="None - local only" />
             <InfoRow k="Telemetry" v="Off" />
           </div>
         </Card>
@@ -160,9 +180,22 @@ function SettingsPage() {
 }
 
 function SettingRow({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return <div className="flex items-start justify-between gap-4"><div className="flex flex-col"><Label className="text-sm">{label}</Label>{hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}</div>{children}</div>;
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col">
+        <Label className="text-sm">{label}</Label>
+        {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
+      </div>
+      {children}
+    </div>
+  );
 }
 
 function InfoRow({ k, v }: { k: string; v: string }) {
-  return <div className="flex justify-between border-b border-border py-2 last:border-0"><span className="text-muted-foreground">{k}</span><span className="font-mono text-xs">{v}</span></div>;
+  return (
+    <div className="flex justify-between border-b border-border py-2 last:border-0">
+      <span className="text-muted-foreground">{k}</span>
+      <span className="font-mono text-xs">{v}</span>
+    </div>
+  );
 }

@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { api } from "@/lib/api";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Toaster } from "@/components/ui/sonner";
@@ -61,10 +62,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Free Win64 PC Cleaner — Windows storage & cleanup" },
+      { title: "Free Win64 PC Cleaner - Windows storage & cleanup" },
       { name: "description", content: "Free Win64 PC Cleaner is a local Windows storage analyzer, file manager and cleanup dashboard." },
       { name: "author", content: "Free Win64 PC Cleaner" },
-      { property: "og:title", content: "Free Win64 PC Cleaner — Windows storage & cleanup" },
+      { property: "og:title", content: "Free Win64 PC Cleaner - Windows storage & cleanup" },
       { property: "og:description", content: "Local-only Windows storage analysis and cleanup with reviewable destructive actions." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -98,12 +99,13 @@ function RootComponent() {
 }
 
 function AppLayout() {
+  const hydrated = useHydrated();
   const health = useQuery({
     queryKey: ["backend-health"],
     queryFn: api.health,
-    enabled: typeof window !== "undefined",
+    enabled: hydrated,
     retry: 2,
-    refetchInterval: 30000,
+    refetchInterval: hydrated ? 30000 : false,
   });
   const online = health.data?.ok === true;
 
@@ -116,13 +118,13 @@ function AppLayout() {
             <SidebarTrigger />
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="font-mono">local</span>
-              <span className="text-muted-foreground/50">·</span>
+              <span className="text-muted-foreground/50">-</span>
               <span>Node.js backend</span>
               <span className={`ml-2 inline-flex h-1.5 w-1.5 rounded-full ${online ? "bg-primary" : "bg-destructive"}`} />
               <span className="text-muted-foreground/80">{online ? "connected" : health.isPending ? "connecting" : "offline"}</span>
             </div>
             <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="font-mono">{health.data ? `${health.data.platform} · ${health.data.architecture}` : "Windows x64"}</span>
+              <span className="font-mono">{health.data ? `${health.data.platform} - ${health.data.architecture}` : "Windows x64"}</span>
             </div>
           </header>
           <main className="flex-1"><Outlet /></main>

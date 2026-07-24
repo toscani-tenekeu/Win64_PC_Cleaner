@@ -9,7 +9,6 @@ import {
   FileBox,
   Package,
   Rocket,
-  ShieldCheck,
   Settings as SettingsIcon,
   HardDrive,
 } from "lucide-react";
@@ -46,8 +45,7 @@ const bottom = [{ title: "Settings", url: "/settings", icon: SettingsIcon }];
 
 export function AppSidebar() {
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
-  const isActive = (path: string) =>
-    path === "/" ? currentPath === "/" : currentPath.startsWith(path);
+  const isActive = (path: string) => (path === "/" ? currentPath === "/" : currentPath.startsWith(path));
 
   const renderGroup = (
     label: string,
@@ -81,7 +79,7 @@ export function AppSidebar() {
           </div>
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-semibold tracking-tight">Free Win64 PC Cleaner</span>
-            <span className="text-[10px] text-muted-foreground font-mono">v0.1 · win64</span>
+            <span className="font-mono text-[10px] text-muted-foreground">v0.1 - win64</span>
           </div>
         </div>
       </SidebarHeader>
