@@ -69,14 +69,14 @@ for (const [key, value] of Object.entries(defaults)) {
   insertSetting.run(key, JSON.stringify(value));
 }
 
-const defaultProtectedPaths = [
+const mandatoryProtectedPaths = [
   process.env.WINDIR || 'C:\\Windows',
   process.env.ProgramFiles || 'C:\\Program Files',
   process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)',
   config.appRoot,
 ];
 const insertProtected = db.prepare('INSERT OR IGNORE INTO protected_paths (path) VALUES (?)');
-for (const protectedPath of defaultProtectedPaths) insertProtected.run(protectedPath);
+for (const protectedPath of mandatoryProtectedPaths) insertProtected.run(protectedPath);
 
 function getSettings() {
   const rows = db.prepare('SELECT key, value FROM settings ORDER BY key').all();
@@ -102,7 +102,7 @@ function updateSettings(patch) {
     }
     if (Array.isArray(patch.protectedPaths)) {
       db.prepare('DELETE FROM protected_paths').run();
-      for (const value of [...patch.protectedPaths, config.appRoot]) {
+      for (const value of [...patch.protectedPaths, ...mandatoryProtectedPaths]) {
         if (typeof value === 'string' && value.trim()) insertProtected.run(value.trim());
       }
     }
