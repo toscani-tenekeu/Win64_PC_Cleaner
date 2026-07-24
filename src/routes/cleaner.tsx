@@ -12,12 +12,12 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/cleaner")({
   head: () => ({
     meta: [
-      { title: "Cleaner — Broomstick" },
+      { title: "Cleaner — Free Win64 PC Cleaner" },
       {
         name: "description",
         content: "Preview every category before cleanup. Nothing is deleted without confirmation.",
       },
-      { property: "og:title", content: "Cleaner — Broomstick" },
+      { property: "og:title", content: "Cleaner — Free Win64 PC Cleaner" },
       {
         property: "og:description",
         content: "Preview every category before cleanup. Nothing is deleted without confirmation.",
