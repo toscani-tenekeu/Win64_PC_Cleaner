@@ -11,9 +11,9 @@ import { Undo2, Trash2 } from "lucide-react";
 export const Route = createFileRoute("/quarantine")({
   head: () => ({
     meta: [
-      { title: "Quarantine — Broomstick" },
+      { title: "Quarantine — Free Win64 PC Cleaner" },
       { name: "description", content: "Every deletion goes here first. Restore or permanently remove after review." },
-      { property: "og:title", content: "Quarantine — Broomstick" },
+      { property: "og:title", content: "Quarantine — Free Win64 PC Cleaner" },
       { property: "og:description", content: "Every deletion goes here first — restore or purge after review." },
     ],
   }),
