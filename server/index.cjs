@@ -166,7 +166,7 @@ app.post('/api/scans/storage', asyncRoute(async (req, res) => {
 }));
 
 app.get('/api/overview', asyncRoute(async (req, res) => {
-  const [drives, cleanupCategories] = await Promise.all([getDrives(), scanCleaner()]);
+  const [drives, cleanupCategories] = await Promise.all([getDrives(), scanCleaner({ log: false })]);
   const activity = db.prepare(`
     SELECT id, action, detail, freed_bytes AS freedBytes, created_at AS createdAt
     FROM activity ORDER BY id DESC LIMIT 10
