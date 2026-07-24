@@ -36,16 +36,19 @@ const defaults: LocalSettings = {
 };
 
 export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [
-    { title: "Settings — Free Win64 PC Cleaner" },
-    { name: "description", content: "Local SQLite settings, protected folders and quarantine behavior." },
-  ] }),
+  head: () => ({
+    meta: [
+      { title: "Settings - Free Win64 PC Cleaner" },
+      { name: "description", content: "Local database settings, protected folders and quarantine behavior." },
+    ],
+  }),
   component: SettingsPage,
 });
 
 function SettingsPage() {
   const client = useQueryClient();
   const query = useQuery({ queryKey: ["settings"], queryFn: api.settings, enabled: typeof window !== "undefined" });
+  const health = useQuery({ queryKey: ["health"], queryFn: api.health, enabled: typeof window !== "undefined" });
   const [settings, setSettings] = useState<LocalSettings>(defaults);
   const [newPath, setNewPath] = useState("");
 
@@ -57,8 +60,9 @@ function SettingsPage() {
     mutationFn: () => api.saveSettings(settings),
     onSuccess: async (saved) => {
       setSettings({ ...defaults, ...(saved as Partial<LocalSettings>) });
-      toast.success("Settings saved to SQLite");
+      toast.success("Settings saved");
       await client.invalidateQueries({ queryKey: ["settings"] });
+      await client.invalidateQueries({ queryKey: ["health"] });
     },
     onError: (error) => toast.error(error.message),
   });
@@ -67,8 +71,13 @@ function SettingsPage() {
     <PageShell
       eyebrow="Configure"
       title="Settings"
-      description="Preferences and protected paths are stored locally in SQLite. There is no account, cloud sync or password."
-      actions={<Button size="sm" className="gap-1.5" disabled={save.isPending || query.isPending} onClick={() => save.mutate()}><Save className="h-3.5 w-3.5" />{save.isPending ? "Saving…" : "Save"}</Button>}
+      description="Preferences and protected paths are stored locally in the configured database. There is no account, cloud sync or password."
+      actions={
+        <Button size="sm" className="gap-1.5" disabled={save.isPending || query.isPending} onClick={() => save.mutate()}>
+          <Save className="h-3.5 w-3.5" />
+          {save.isPending ? "Saving..." : "Save"}
+        </Button>
+      }
     >
       {query.isError ? <Card className="border-destructive/40 p-4 text-sm text-destructive">Unable to load settings: {query.error.message}</Card> : null}
       <div className="grid gap-4 lg:grid-cols-2">
@@ -110,18 +119,39 @@ function SettingsPage() {
           <span className="label-eyebrow">Protected folders</span>
           <p className="mt-1 text-xs text-muted-foreground">Manual file operations are blocked inside these paths. Known cleanup categories use narrowly defined exceptions.</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            {settings.protectedPaths.map((protectedPath) => <Badge key={protectedPath} variant="secondary" className="gap-1.5 py-1 font-mono text-[11px]">{protectedPath}<button onClick={() => setSettings((current) => ({ ...current, protectedPaths: current.protectedPaths.filter((value) => value !== protectedPath) }))} className="text-muted-foreground hover:text-destructive"><X className="h-3 w-3" /></button></Badge>)}
+            {settings.protectedPaths.map((protectedPath) => (
+              <Badge key={protectedPath} variant="secondary" className="gap-1.5 py-1 font-mono text-[11px]">
+                {protectedPath}
+                <button onClick={() => setSettings((current) => ({ ...current, protectedPaths: current.protectedPaths.filter((value) => value !== protectedPath) }))} className="text-muted-foreground hover:text-destructive">
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
           </div>
           <div className="mt-4 flex gap-2">
             <Input value={newPath} onChange={(event) => setNewPath(event.target.value)} placeholder="C:\\path\\to\\protect" className="font-mono text-xs" />
-            <Button variant="secondary" onClick={() => { const value = newPath.trim(); if (value && !settings.protectedPaths.includes(value)) { setSettings((current) => ({ ...current, protectedPaths: [...current.protectedPaths, value] })); setNewPath(""); } }}><Plus className="mr-1 h-3.5 w-3.5" />Add</Button>
+            <Button variant="secondary" onClick={() => {
+              const value = newPath.trim();
+              if (value && !settings.protectedPaths.includes(value)) {
+                setSettings((current) => ({ ...current, protectedPaths: [...current.protectedPaths, value] }));
+                setNewPath("");
+              }
+            }}>
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Add
+            </Button>
           </div>
         </Card>
 
         <Card className="p-5 lg:col-span-2">
           <span className="label-eyebrow">About</span>
           <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-            <InfoRow k="Version" v="0.2.0" /><InfoRow k="Backend" v="Node.js + Express" /><InfoRow k="Database" v="better-sqlite3 · WAL" /><InfoRow k="Target" v="Windows 10/11 · x64" /><InfoRow k="Authentication" v="None · local only" /><InfoRow k="Telemetry" v="Off" />
+            <InfoRow k="Version" v="0.2.0" />
+            <InfoRow k="Backend" v="Node.js + Express" />
+            <InfoRow k="Database" v={health.data?.database || "Local database"} />
+            <InfoRow k="Target" v="Windows 10/11 x64" />
+            <InfoRow k="Authentication" v="None, local only" />
+            <InfoRow k="Telemetry" v="Off" />
           </div>
         </Card>
       </div>

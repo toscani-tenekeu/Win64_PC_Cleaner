@@ -1,7 +1,13 @@
 const crypto = require('node:crypto');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
-const { db, logActivity } = require('./database.cjs');
+const {
+  getDisabledStartupEntries,
+  getDisabledStartupEntryById,
+  upsertDisabledStartupEntry,
+  deleteDisabledStartupEntry,
+  logActivity,
+} = require('./database.cjs');
 const execFileAsync = promisify(execFile);
 
 function ensureWindows() {
@@ -23,7 +29,10 @@ async function powershell(script, timeout = 30000) {
 }
 
 async function powershellJson(script, timeout) {
-  const output = await powershell(`$ErrorActionPreference='Stop'; ${script} | ConvertTo-Json -Depth 6 -Compress`, timeout);
+  const output = await powershell(
+    `$ErrorActionPreference='Stop'; ${String(script).trimEnd()} | ConvertTo-Json -Depth 6 -Compress`,
+    timeout,
+  );
   if (!output) return [];
   const value = JSON.parse(output);
   return Array.isArray(value) ? value : [value];
@@ -125,22 +134,13 @@ async function getActiveStartupEntries() {
 
 async function getStartupEntries() {
   const active = await getActiveStartupEntries();
-  const disabled = db.prepare(`
-    SELECT id, name, command AS path, registry_path AS registryPath, scope AS publisher
-    FROM disabled_startup ORDER BY name
-  `).all().map((row) => ({
-    ...row,
-    valueName: row.name,
-    enabled: false,
-    impact: 'medium',
-    source: 'registry',
-  }));
+  const disabled = await getDisabledStartupEntries();
   return [...active, ...disabled].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 async function toggleStartup(id, enabled) {
   if (enabled) {
-    const item = db.prepare('SELECT * FROM disabled_startup WHERE id = ?').get(id);
+    const item = await getDisabledStartupEntryById(id);
     if (!item) {
       const error = new Error('Disabled startup entry not found.');
       error.status = 404;
@@ -156,8 +156,8 @@ async function toggleStartup(id, enabled) {
       if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null };
       New-ItemProperty -Path $path -Name $name -Value $command -PropertyType String -Force | Out-Null
     `);
-    db.prepare('DELETE FROM disabled_startup WHERE id = ?').run(id);
-    logActivity('Startup', `Enabled ${item.name}`);
+    await deleteDisabledStartupEntry(id);
+    await logActivity('Startup', `Enabled ${item.name}`);
     return { id, enabled: true };
   }
 
@@ -171,15 +171,18 @@ async function toggleStartup(id, enabled) {
   const registryPath = encodePowerShell(item.registryPath);
   const name = encodePowerShell(item.valueName);
   await powershell(`
-    $path=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${registryPath}'));
-    $name=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${name}'));
-    Remove-ItemProperty -Path $path -Name $name -ErrorAction Stop
-  `);
-  db.prepare(`
-    INSERT OR REPLACE INTO disabled_startup (id, name, command, registry_path, scope)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(item.id, item.name, item.path, item.registryPath, item.publisher);
-  logActivity('Startup', `Disabled ${item.name}`);
+      $path=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${registryPath}'));
+      $name=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('${name}'));
+      Remove-ItemProperty -Path $path -Name $name -ErrorAction Stop
+    `);
+  await upsertDisabledStartupEntry({
+    id: item.id,
+    name: item.name,
+    command: item.path,
+    registryPath: item.registryPath,
+    scope: item.publisher,
+  });
+  await logActivity('Startup', `Disabled ${item.name}`);
   return { id, enabled: false };
 }
 

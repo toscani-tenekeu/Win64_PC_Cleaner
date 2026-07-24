@@ -1,17 +1,68 @@
 # Free Win64 PC Cleaner
 
-A local-only Windows 10/11 x64 file manager, storage analyzer and PC cleanup application.
+A local-only Windows 10/11 x64 file manager, storage analyzer, and cleanup tool.
 
-## Local architecture
+## What it uses
 
-- Frontend: React, TanStack Start and Tailwind CSS.
-- Backend: Node.js and Express, bound only to `127.0.0.1:3210`.
-- Database: `better-sqlite3` with WAL mode.
-- Authentication: none. The API is intentionally accessible only from the local computer.
-- System integration: PowerShell and native Node.js filesystem APIs.
-- Safety: cleanup and manual deletion move files to the application quarantine first.
+- Frontend: React, TanStack Start, Tailwind CSS
+- Backend: Node.js and Express
+- Local database: SQLite via Node's built-in `node:sqlite`, or MySQL via `mysql2`
+- Scope: local machine only, no account, no cloud sync, no telemetry
 
-Application data is stored outside the repository:
+## Requirements
+
+- Bun
+- Node.js 22+ x64
+- Windows 10 or Windows 11 x64
+
+Node is still required at runtime because the backend uses Node-specific APIs.
+Bun is used for dependency installation and the main project launcher.
+
+## Install and start
+
+From the project root:
+
+```powershell
+bun install
+bun run start
+```
+
+On Windows you can also double-click:
+
+```text
+start-windows.bat
+```
+
+That launcher checks Bun and Node, installs dependencies with Bun if needed, then starts the app.
+
+## Database selection
+
+Create a `.env` file in the project root:
+
+```env
+DB_CLIENT=sqlite
+```
+
+Or switch to MySQL:
+
+```env
+DB_CLIENT=mysql
+DATABASE_URL=mysql://root:password@127.0.0.1:3306/free_win64_pc_cleaner
+```
+
+Optional MySQL variables are also supported:
+
+```env
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=
+MYSQL_DATABASE=free_win64_pc_cleaner
+```
+
+## Local data location
+
+When SQLite is selected, app data is stored outside the repo:
 
 ```text
 %LOCALAPPDATA%\FreeWin64PCCleaner\
@@ -19,51 +70,26 @@ Application data is stored outside the repository:
 └── quarantine\
 ```
 
-## Windows 10/11 x64 installation
-
-Install a current Node.js LTS x64 release. Then clone or download this repository and double-click:
-
-```text
-start-windows.bat
-```
-
-The launcher installs dependencies on the first run, starts the local API and frontend, then opens:
-
-```text
-http://127.0.0.1:3000
-```
-
-No account or password is requested.
-
-## Command-line start
+## Useful commands
 
 ```powershell
-npm install
-npm start
+bun run backend
+bun run frontend
 ```
 
-Separate processes are also available:
+## Features
 
-```powershell
-npm run backend
-npm run frontend
-```
+- Drive free-space reporting
+- Installed application inventory and official uninstaller launch
+- Startup registry enable/disable with local persistence
+- File browser, copy, move, and folder creation
+- Quarantine for manual delete and cleanup operations
+- Cleanup scans for temp files, caches, crash dumps, and browser data
+- Large-file, duplicate-file, and storage-usage scans
+- Local settings with protected paths
 
-## Implemented backend capabilities
+## Notes
 
-- Local API health and compatibility status.
-- Windows drive capacity and free-space discovery.
-- Installed desktop application inventory and official uninstaller launch.
-- Startup registry inventory with reversible enable and disable operations.
-- Real directory browsing and folder creation.
-- File copy, move and quarantine operations.
-- Cleanup scans for temporary files, thumbnail cache, DirectX cache, crash dumps, Windows error reports and browser caches.
-- SQLite-backed quarantine restore and permanent purge.
-- Large-file, SHA-256 duplicate-file and storage-usage scans.
-- SQLite-backed settings, mandatory protected paths and activity history.
-
-## Validation
-
-Every push to `main` runs the Windows validation workflow. It installs the dependencies with Node.js 24 x64, checks the syntax of every backend module and builds the frontend on `windows-latest`.
-
-Some Windows locations require starting the terminal as Administrator. The backend reports access errors per item instead of silently deleting inaccessible data.
+- The app binds to `127.0.0.1` only.
+- Some cleanup actions need Administrator privileges.
+- If you switch database backends, keep the `.env` file in sync with the database you actually want to use.

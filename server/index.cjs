@@ -2,7 +2,15 @@ const express = require('express');
 const os = require('node:os');
 const path = require('node:path');
 const config = require('./config.cjs');
-const { db, getSettings, updateSettings, logActivity } = require('./database.cjs');
+const {
+  initializeDatabase,
+  getDatabaseInfo,
+  getSettings,
+  updateSettings,
+  logActivity,
+  listActivity,
+  closeDatabase,
+} = require('./database.cjs');
 const { getDrives, getApplications, launchUninstaller, getStartupEntries, toggleStartup } = require('./windows.cjs');
 const {
   listDirectory, createFolder, copyPath, movePath, quarantinePath,
@@ -18,6 +26,7 @@ app.use(express.json({ limit: '1mb' }));
 const asyncRoute = (handler) => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
 
 app.get('/api/health', (req, res) => {
+  const database = getDatabaseInfo();
   res.json({
     ok: true,
     name: 'Free Win64 PC Cleaner',
@@ -25,7 +34,8 @@ app.get('/api/health', (req, res) => {
     platform: process.platform,
     architecture: process.arch,
     windowsSupported: process.platform === 'win32' && process.arch === 'x64',
-    database: config.databasePath,
+    database: database.label,
+    databaseClient: database.client,
     authentication: false,
     localOnly: true,
   });
@@ -45,7 +55,7 @@ app.get('/api/applications', asyncRoute(async (req, res) => {
 
 app.post('/api/applications/:id/uninstall', asyncRoute(async (req, res) => {
   const result = await launchUninstaller(req.params.id);
-  logActivity('Uninstall', `Launched official uninstaller for ${result.name}`);
+  await logActivity('Uninstall', `Launched official uninstaller for ${result.name}`);
   res.json(result);
 }));
 
@@ -75,7 +85,7 @@ app.post('/api/files/move', asyncRoute(async (req, res) => {
 
 app.delete('/api/files', asyncRoute(async (req, res) => {
   const item = await quarantinePath(req.body.path, req.body.category || 'Manual file operation');
-  logActivity('Quarantine', item.originalPath, item.sizeBytes);
+  await logActivity('Quarantine', item.originalPath, item.sizeBytes);
   res.json(item);
 }));
 
@@ -87,9 +97,9 @@ app.post('/api/cleaner/run', asyncRoute(async (req, res) => {
   res.json(await runCleanup(req.body.categoryIds));
 }));
 
-app.get('/api/quarantine', (req, res) => {
-  res.json(listQuarantine());
-});
+app.get('/api/quarantine', asyncRoute(async (req, res) => {
+  res.json(await listQuarantine());
+}));
 
 app.post('/api/quarantine/:id/restore', asyncRoute(async (req, res) => {
   res.json(await restoreQuarantine(req.params.id));
@@ -103,24 +113,20 @@ app.get('/api/settings', (req, res) => {
   res.json(getSettings());
 });
 
-app.put('/api/settings', (req, res) => {
-  res.json(updateSettings(req.body || {}));
-});
+app.put('/api/settings', asyncRoute(async (req, res) => {
+  res.json(await updateSettings(req.body || {}));
+}));
 
-app.get('/api/activity', (req, res) => {
+app.get('/api/activity', asyncRoute(async (req, res) => {
   const limit = Math.max(1, Math.min(Number(req.query.limit || 50), 500));
-  const rows = db.prepare(`
-    SELECT id, action, detail, freed_bytes AS freedBytes, created_at AS createdAt
-    FROM activity ORDER BY id DESC LIMIT ?
-  `).all(limit);
-  res.json(rows);
-});
+  res.json(await listActivity(limit));
+}));
 
 app.post('/api/scans/large-files', asyncRoute(async (req, res) => {
   const root = req.body.root || os.homedir();
   const minBytes = Math.max(0, Number(req.body.minMB || 1024) * 1024 * 1024);
   const files = await findLargeFiles(root, minBytes, Number(req.body.limit || 500));
-  logActivity('Scan', `Large-file scan: ${root}`);
+  await logActivity('Scan', `Large-file scan: ${root}`);
   res.json({ root: path.resolve(root), files });
 }));
 
@@ -128,7 +134,7 @@ app.post('/api/scans/duplicates', asyncRoute(async (req, res) => {
   const root = req.body.root || os.homedir();
   const minBytes = Math.max(1, Number(req.body.minMB || 1) * 1024 * 1024);
   const groups = await findDuplicates(root, minBytes);
-  logActivity('Scan', `Duplicate scan: ${root}`);
+  await logActivity('Scan', `Duplicate scan: ${root}`);
   res.json({ root: path.resolve(root), groups });
 }));
 
@@ -156,7 +162,7 @@ app.post('/api/scans/storage', asyncRoute(async (req, res) => {
     }));
   } catch {}
   children.sort((a, b) => b.sizeBytes - a.sizeBytes);
-  logActivity('Scan', `Storage scan: ${root}`);
+  await logActivity('Scan', `Storage scan: ${root}`);
   res.json({
     root: path.resolve(root),
     scannedFiles: files.length,
@@ -166,12 +172,13 @@ app.post('/api/scans/storage', asyncRoute(async (req, res) => {
 }));
 
 app.get('/api/overview', asyncRoute(async (req, res) => {
-  const [drives, cleanupCategories] = await Promise.all([getDrives(), scanCleaner({ log: false })]);
-  const activity = db.prepare(`
-    SELECT id, action, detail, freed_bytes AS freedBytes, created_at AS createdAt
-    FROM activity ORDER BY id DESC LIMIT 10
-  `).all();
-  res.json({ drives, cleanupCategories, quarantine: listQuarantine(), activity });
+  const [drives, cleanupCategories, quarantine, activity] = await Promise.all([
+    getDrives(),
+    scanCleaner({ log: false }),
+    listQuarantine(),
+    listActivity(10),
+  ]);
+  res.json({ drives, cleanupCategories, quarantine, activity });
 }));
 
 app.use((req, res) => {
@@ -187,19 +194,30 @@ app.use((error, req, res, next) => {
   });
 });
 
-const server = app.listen(config.port, config.host, () => {
-  console.log(`Free Win64 PC Cleaner backend: http://${config.host}:${config.port}`);
-  console.log(`SQLite database: ${config.databasePath}`);
-  if (process.platform !== 'win32' || process.arch !== 'x64') {
-    console.warn('Warning: system operations require Windows 10/11 x64.');
-  }
-});
-
-for (const signal of ['SIGINT', 'SIGTERM']) {
-  process.on(signal, () => {
-    server.close(() => {
-      db.close();
-      process.exit(0);
-    });
+async function main() {
+  await initializeDatabase();
+  const server = app.listen(config.port, config.host, () => {
+    console.log(`Free Win64 PC Cleaner backend: http://${config.host}:${config.port}`);
+    console.log(`${config.databaseLabel} database ready`);
+    if (process.platform !== 'win32' || process.arch !== 'x64') {
+      console.warn('Warning: system operations require Windows 10/11 x64.');
+    }
   });
+
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.on(signal, () => {
+      server.close(() => {
+        closeDatabase()
+          .catch((error) => {
+            console.error('Failed to close database:', error);
+          })
+          .finally(() => process.exit(0));
+      });
+    });
+  }
 }
+
+main().catch((error) => {
+  console.error('Failed to start backend:', error);
+  process.exit(1);
+});

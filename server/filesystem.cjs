@@ -4,7 +4,14 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const os = require('node:os');
 const config = require('./config.cjs');
-const { db, getSettings, logActivity } = require('./database.cjs');
+const {
+  getSettings,
+  logActivity,
+  insertQuarantineItem,
+  listQuarantine: listQuarantineRows,
+  getQuarantineItem,
+  deleteQuarantineItem,
+} = require('./database.cjs');
 
 function normalizePath(value) {
   if (typeof value !== 'string' || !value.trim()) {
@@ -108,7 +115,7 @@ async function createFolder(parentPath, name) {
   assertNotProtected(parent);
   const target = path.join(parent, name.trim());
   await fsp.mkdir(target, { recursive: false });
-  logActivity('Folder', `Created ${target}`);
+  await logActivity('Folder', `Created ${target}`);
   return { path: target };
 }
 
@@ -117,7 +124,7 @@ async function copyPath(sourcePath, destinationPath) {
   const destination = normalizePath(destinationPath);
   assertNotProtected(destination);
   await fsp.cp(source, destination, { recursive: true, errorOnExist: true });
-  logActivity('Copy', `${source} → ${destination}`);
+  await logActivity('Copy', `${source} → ${destination}`);
   return { source, destination };
 }
 
@@ -133,7 +140,7 @@ async function movePath(sourcePath, destinationPath) {
     await fsp.cp(source, destination, { recursive: true, errorOnExist: true });
     await fsp.rm(source, { recursive: true, force: false });
   }
-  logActivity('Move', `${source} → ${destination}`);
+  await logActivity('Move', `${source} → ${destination}`);
   return { source, destination };
 }
 
@@ -154,58 +161,59 @@ async function quarantinePath(inputPath, category = 'Manual', options = {}) {
   const retentionDays = Number(getSettings().quarantineRetentionDays || 30);
   const deletedAt = new Date();
   const expiresAt = new Date(deletedAt.getTime() + retentionDays * 86400000);
-  db.prepare(`
-    INSERT INTO quarantine_items
-      (id, original_path, stored_path, size_bytes, category, deleted_at, expires_at, is_directory)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, originalPath, storedPath, bytes, category, deletedAt.toISOString(), expiresAt.toISOString(), stat.isDirectory() ? 1 : 0);
+  await insertQuarantineItem({
+    id,
+    originalPath,
+    storedPath,
+    sizeBytes: bytes,
+    category,
+    deletedAt: deletedAt.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    isDirectory: stat.isDirectory(),
+  });
   return { id, originalPath, storedPath, sizeBytes: bytes, category };
 }
 
-function listQuarantine() {
-  return db.prepare(`
-    SELECT id, original_path AS originalPath, size_bytes AS sizeBytes, category,
-           deleted_at AS deletedAt, expires_at AS expiresAt, is_directory AS isDirectory
-    FROM quarantine_items ORDER BY deleted_at DESC
-  `).all().map((item) => ({ ...item, isDirectory: Boolean(item.isDirectory) }));
+async function listQuarantine() {
+  return listQuarantineRows();
 }
 
 async function restoreQuarantine(id) {
-  const item = db.prepare('SELECT * FROM quarantine_items WHERE id = ?').get(id);
+  const item = await getQuarantineItem(id);
   if (!item) {
     const error = new Error('Quarantine item not found.');
     error.status = 404;
     throw error;
   }
-  await fsp.mkdir(path.dirname(item.original_path), { recursive: true });
-  if (fs.existsSync(item.original_path)) {
+  await fsp.mkdir(path.dirname(item.originalPath), { recursive: true });
+  if (fs.existsSync(item.originalPath)) {
     const error = new Error('The original location already contains an item with the same name.');
     error.status = 409;
     throw error;
   }
   try {
-    await fsp.rename(item.stored_path, item.original_path);
+    await fsp.rename(item.storedPath, item.originalPath);
   } catch (error) {
     if (error.code !== 'EXDEV') throw error;
-    await fsp.cp(item.stored_path, item.original_path, { recursive: true, errorOnExist: true });
-    await fsp.rm(item.stored_path, { recursive: true, force: true });
+    await fsp.cp(item.storedPath, item.originalPath, { recursive: true, errorOnExist: true });
+    await fsp.rm(item.storedPath, { recursive: true, force: true });
   }
-  db.prepare('DELETE FROM quarantine_items WHERE id = ?').run(id);
-  logActivity('Restore', item.original_path);
-  return { restored: true, path: item.original_path };
+  await deleteQuarantineItem(id);
+  await logActivity('Restore', item.originalPath);
+  return { restored: true, path: item.originalPath };
 }
 
 async function purgeQuarantine(id) {
-  const item = db.prepare('SELECT * FROM quarantine_items WHERE id = ?').get(id);
+  const item = await getQuarantineItem(id);
   if (!item) {
     const error = new Error('Quarantine item not found.');
     error.status = 404;
     throw error;
   }
-  await fsp.rm(item.stored_path, { recursive: true, force: true });
-  db.prepare('DELETE FROM quarantine_items WHERE id = ?').run(id);
-  logActivity('Purge', item.original_path, item.size_bytes);
-  return { purged: true, sizeBytes: item.size_bytes };
+  await fsp.rm(item.storedPath, { recursive: true, force: true });
+  await deleteQuarantineItem(id);
+  await logActivity('Purge', item.originalPath, item.sizeBytes);
+  return { purged: true, sizeBytes: item.sizeBytes };
 }
 
 async function walkFiles(rootPath, options = {}) {

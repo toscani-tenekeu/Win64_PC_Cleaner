@@ -107,7 +107,7 @@ async function scanCleaner(options = {}) {
       available: definition.roots.length > 0,
     });
   }
-  if (options.log !== false) logActivity('Scan', `Cleaner scan completed (${categories.length} categories)`);
+  if (options.log !== false) await logActivity('Scan', `Cleaner scan completed (${categories.length} categories)`);
   return categories;
 }
 
@@ -133,7 +133,7 @@ async function runCleanup(categoryIds) {
     totalBytes += bytes;
     results.push({ id: definition.id, moved, sizeBytes: bytes, errors });
   }
-  logActivity('Clean', 'Moved cleanup data to quarantine', totalBytes);
+  await logActivity('Clean', 'Moved cleanup data to quarantine', totalBytes);
   return { sizeBytes: totalBytes, results };
 }
 

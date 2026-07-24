@@ -9,10 +9,12 @@ import { toast } from "sonner";
 import { Undo2, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/quarantine")({
-  head: () => ({ meta: [
-    { title: "Quarantine — Free Win64 PC Cleaner" },
-    { name: "description", content: "Restore or permanently purge files held in the local SQLite-backed quarantine." },
-  ] }),
+  head: () => ({
+    meta: [
+      { title: "Quarantine - Free Win64 PC Cleaner" },
+      { name: "description", content: "Restore or permanently purge files held in the local database-backed quarantine." },
+    ],
+  }),
   component: QuarantinePage,
 });
 
@@ -34,13 +36,13 @@ function QuarantinePage() {
     <PageShell eyebrow="Safety" title="Quarantine" description="Cleanup and manual delete operations are stored here first. Restore an item or purge it permanently after review.">
       {query.isError ? <Card className="border-destructive/40 p-4 text-sm text-destructive">Unable to read quarantine: {query.error.message}</Card> : null}
       <section className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Items" value={query.isPending ? "…" : items.length.toString()} />
+        <Stat label="Items" value={query.isPending ? "..." : items.length.toString()} />
         <Stat label="Reserved" value={formatBytes(totalBytes)} />
-        <Stat label="Storage" value="Local" hint="SQLite metadata + files" />
+        <Stat label="Storage" value="Local" hint="Database metadata + files" />
       </section>
 
       <Card className="p-0">
-        {query.isPending ? <div className="p-10 text-center text-sm text-muted-foreground">Loading local quarantine…</div> : items.length === 0 ? <div className="p-10 text-center text-sm text-muted-foreground">Quarantine is empty.</div> : <ul className="divide-y divide-border">
+        {query.isPending ? <div className="p-10 text-center text-sm text-muted-foreground">Loading local quarantine...</div> : items.length === 0 ? <div className="p-10 text-center text-sm text-muted-foreground">Quarantine is empty.</div> : <ul className="divide-y divide-border">
           {items.map((item) => <li key={item.id} className="flex items-center gap-4 px-4 py-3">
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate font-mono text-xs">{item.originalPath}</span>

@@ -6,6 +6,7 @@ export type Health = {
   architecture: string;
   windowsSupported: boolean;
   database: string;
+  databaseClient: 'sqlite' | 'mysql' | string;
   authentication: false;
   localOnly: true;
 };
