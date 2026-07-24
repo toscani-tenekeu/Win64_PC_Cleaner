@@ -3,7 +3,7 @@ const os = require('node:os');
 const path = require('node:path');
 const config = require('./config.cjs');
 const { db, getSettings, updateSettings, logActivity } = require('./database.cjs');
-const { getDrives, getApplications, launchUninstaller, getStartupEntries } = require('./windows.cjs');
+const { getDrives, getApplications, launchUninstaller, getStartupEntries, toggleStartup } = require('./windows.cjs');
 const {
   listDirectory, createFolder, copyPath, movePath, quarantinePath,
   listQuarantine, restoreQuarantine, purgeQuarantine,
@@ -51,6 +51,10 @@ app.post('/api/applications/:id/uninstall', asyncRoute(async (req, res) => {
 
 app.get('/api/startup', asyncRoute(async (req, res) => {
   res.json(await getStartupEntries());
+}));
+
+app.post('/api/startup/:id/toggle', asyncRoute(async (req, res) => {
+  res.json(await toggleStartup(req.params.id, Boolean(req.body.enabled)));
 }));
 
 app.get('/api/files', asyncRoute(async (req, res) => {
